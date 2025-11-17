@@ -254,29 +254,45 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
   </div>
 
   <!-- deposit -->
-  <div id="deposit" class="card full" style="display:none;margin-top:18px">
-    <h3 style="color:var(--gold)">💳 Deposit (UPI)</h3>
-    <div style="margin-top:10px">
-      <input id="depositAmt" type="number" min="1" placeholder="Amount (₹)">
+<div id="deposit" class="card full" style="margin-top:18px">
+  <h3 style="color:var(--gold)">💳 Deposit</h3>
 
-      <select id="depositType" style="margin-top:10px;width:100%;padding:10px;border-radius:8px;background:#0b0b0f;color:#fff">
-        <option value="qr">Pay via QR</option>
-      </select>
+  <!-- Amount -->
+  <input id="depositAmt" type="number" min="1" placeholder="Amount (₹)" 
+         style="margin-top:10px;width:100%;padding:12px;border-radius:10px;
+         background:#0b0b0f;border:none;color:#fff;font-size:15px;">
 
-      <button class="btn gold" onclick="startDeposit()" style="margin-top:10px;width:100%">Continue</button>
-    </div>
+  <!-- Method -->
+  <select id="depositType" 
+          style="margin-top:10px;width:100%;padding:12px;border-radius:10px;
+          background:#0b0b0f;color:#fff;font-size:15px;">
+    <option value="qr">Pay via QR</option>
+    <option value="gpay">Google Pay</option>
+    <option value="phonepe">PhonePe</option>
+    <option value="paytm">Paytm</option>
+  </select>
 
-    <div class="small" style="margin-top:10px">You will see a QR + UPI. After paying, press <b>Done</b> to send request to admin.</div>
+  <!-- Continue Button -->
+  <button class="btn gold" onclick="startDeposit()" 
+          style="margin-top:12px;width:100%;padding:12px;font-size:16px;">
+    Continue
+  </button>
 
-    <div id="depositFlow" style="display:none;margin-top:12px">
-      <div class="small">Send payment to:</div>
-      <div style="margin-top:6px;font-weight:700;color:#cfead0" id="upiDisplay"></div>
-      <div class="qr" id="qrWrap"></div>
-      <div class="small" id="countdownDisplay" style="margin-top:8px"></div>
-      <div style="margin-top:10px"><button class="btn gold" id="depositDoneBtn" onclick="finishDeposit()" disabled>Done</button></div>
-    </div>
+  <div class="small" style="margin-top:10px;color:#bbb;">
+    Scan QR or choose your UPI app for fast payment.
   </div>
 
+  <!-- Payment Flow Container -->
+  <div id="depositFlow" style="display:none;margin-top:12px">
+    <div id="upiDisplay" class="small" style="margin-bottom:6px;"></div>
+    <div id="qrWrap" class="qr"></div>
+    <div id="countdownDisplay" class="small" style="margin-top:8px"></div>
+    <button id="depositDoneBtn" class="btn gold" onclick="finishDeposit()" 
+            style="margin-top:12px;width:100%" disabled>
+      Done
+    </button>
+  </div>
+</div>
   <!-- withdraw -->
  <div id="withdraw" class="card full" style="display:none;margin-top:18px">
 
@@ -955,80 +971,62 @@ function startDeposit() {
   if (amt > 20000) return showMessage("Max ₹20,000", "error");
 
   if (type === "qr") depositViaQR(amt);
-  else if (type === "phone") depositViaPhoneNumber(amt); // optional
+  else if (type === "phone") depositViaPhoneNumber(amt); // optional if you keep phone option
 }
 
 /* =====================================================
-   QR DEPOSIT (NO MOBILE NUMBER, NO UPI TEXT SHOWN)
+   QR PAYMENT SYSTEM (NO WARNING)
 ===================================================== */
 function depositViaQR(amt) {
   const upi = "Q424657914@ybl";
 
-  // UPI Link used in QR + UPI App Opening
   const upiLink = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
 
-  // QR Image
-  const qrImg = 
+  // QR
+  const qrImg =
     `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  let mobileOptions = "";
+
+  if (isMobile) {
+    mobileOptions = `
+      <button class="btn primary" onclick="payGPay('${upi}', ${amt})" style="width:100%;margin-top:10px;">
+        Pay with Google Pay
+      </button>
+
+      <button class="btn primary" onclick="payPhonePe('${upi}', ${amt})" style="width:100%;margin-top:10px;">
+        Pay with PhonePe
+      </button>
+
+      <button class="btn primary" onclick="payPaytm('${upi}', ${amt})" style="width:100%;margin-top:10px;">
+        Pay with Paytm
+      </button>
+    `;
+  }
 
   openPopup(
     "Scan to Pay",
     `
       <div style="text-align:center; margin-bottom:10px;">
         <img src="${qrImg}" 
-             width="220" height="220" 
+             width="220" 
+             height="220" 
              style="border-radius:12px;">
       </div>
 
       <div class='small'>Amount: ₹${amt}</div>
 
-      <div class='small' style="margin-top:10px;">
-        If scanning doesn't work, tap below to open UPI App.
-      </div>
+      ${isMobile ? "<div class='small' style='margin-top:10px;'>Or choose a UPI app:</div>" : ""}
     `,
     `
-      <button class='btn primary' onclick="openUPIApp('${upi}', ${amt})">
-        Open UPI App
-      </button>
-      <button class='btn gold' onclick="finishDeposit(${amt})">
+      ${mobileOptions}
+      <button class='btn gold' onclick="finishDeposit(${amt})" style="width:100%;margin-top:10px;">
         DONE
       </button>
     `
   );
-}
-
-/* =====================================================
-   OPEN UPI APP BUTTON FUNCTION
-===================================================== */
-function openUPIApp(upi, amt) {
-  const link = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
-  window.location.href = link;
-}
-
-/* =====================================================
-   FINISH DEPOSIT (SAME AS BEFORE)
-===================================================== */
-function finishDeposit(amt) {
-  closePopup();
-
-  const id = randomID();
-  const d = {
-    id,
-    owner: currentUser,
-    amount: amt,
-    status: "pending",
-    created: now()
-  };
-
-  // Save to LocalStorage
-  const arr = getStore("deposits", []);
-  arr.unshift(d);
-  setStore("deposits", arr);
-
-  if (firebaseEnabled && db) writeDoc("deposits", id, d);
-
-  renderTables();
-  showMessage("Deposit request submitted!", "success");
 }
 /* =====================================================
    WITHDRAW
@@ -1366,5 +1364,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 

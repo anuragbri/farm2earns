@@ -257,13 +257,11 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 <div id="deposit" class="card full" style="margin-top:18px">
   <h3 style="color:var(--gold)">💳 Deposit</h3>
 
-  <!-- Amount -->
-  <input id="depositAmt" type="number" min="1" placeholder="Amount (₹)" 
+  <input id="depositAmt" type="number" min="1" placeholder="Amount (₹)"
          style="margin-top:10px;width:100%;padding:12px;border-radius:10px;
          background:#0b0b0f;border:none;color:#fff;font-size:15px;">
 
-  <!-- Method -->
-  <select id="depositType" 
+  <select id="depositType"
           style="margin-top:10px;width:100%;padding:12px;border-radius:10px;
           background:#0b0b0f;color:#fff;font-size:15px;">
     <option value="qr">Pay via QR</option>
@@ -272,27 +270,12 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
     <option value="paytm">Paytm</option>
   </select>
 
-  <!-- Continue Button -->
   <button class="btn gold" onclick="startDeposit()" 
           style="margin-top:12px;width:100%;padding:12px;font-size:16px;">
     Continue
   </button>
-
-  <div class="small" style="margin-top:10px;color:#bbb;">
-    Scan QR or choose your UPI app for fast payment.
-  </div>
-
-  <!-- Payment Flow Container -->
-  <div id="depositFlow" style="display:none;margin-top:12px">
-    <div id="upiDisplay" class="small" style="margin-bottom:6px;"></div>
-    <div id="qrWrap" class="qr"></div>
-    <div id="countdownDisplay" class="small" style="margin-top:8px"></div>
-    <button id="depositDoneBtn" class="btn gold" onclick="finishDeposit()" 
-            style="margin-top:12px;width:100%" disabled>
-      Done
-    </button>
-  </div>
 </div>
+
   <!-- withdraw -->
  <div id="withdraw" class="card full" style="display:none;margin-top:18px">
 
@@ -963,6 +946,15 @@ function settleQuickFarm(id) {
 /* =====================================================
    DEPOSIT
 ===================================================== */
+/* =====================================================
+   GLOBAL
+===================================================== */
+const UPI = "Q424657914@ybl";
+let __lastDepositAmt = 0;
+
+/* =====================================================
+   START DEPOSIT
+===================================================== */
 function startDeposit() {
   const amt = parseInt(document.getElementById("depositAmt").value) || 0;
   const type = document.getElementById("depositType").value;
@@ -970,64 +962,137 @@ function startDeposit() {
   if (amt < 100) return showMessage("Min ₹100", "error");
   if (amt > 20000) return showMessage("Max ₹20,000", "error");
 
-  if (type === "qr") depositViaQR(amt);
-  else if (type === "phone") depositViaPhoneNumber(amt); // optional if you keep phone option
+  __lastDepositAmt = amt;
+
+  if (type === "qr") return depositViaQR(amt);
+  if (type === "gpay") return payGPay(UPI, amt);
+  if (type === "phonepe") return payPhonePe(UPI, amt);
+  if (type === "paytm") return payPaytm(UPI, amt);
 }
 
 /* =====================================================
-   QR PAYMENT SYSTEM (NO WARNING)
+   UNIVERSAL PAYMENT POPUP (QR)
 ===================================================== */
 function depositViaQR(amt) {
-  const upi = "Q424657914@ybl";
+  const upiLink = `upi://pay?pa=${UPI}&pn=Farm2Earn&am=${amt}&cu=INR`;
 
-  const upiLink = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
-
-  // QR
-  const qrImg =
+  const qrImg = 
     `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  let mobileOptions = "";
-
+  let mobileButtons = "";
   if (isMobile) {
-    mobileOptions = `
-      <button class="btn primary" onclick="payGPay('${upi}', ${amt})" style="width:100%;margin-top:10px;">
-        Pay with Google Pay
-      </button>
-
-      <button class="btn primary" onclick="payPhonePe('${upi}', ${amt})" style="width:100%;margin-top:10px;">
-        Pay with PhonePe
-      </button>
-
-      <button class="btn primary" onclick="payPaytm('${upi}', ${amt})" style="width:100%;margin-top:10px;">
-        Pay with Paytm
-      </button>
+    mobileButtons = `
+      <button class="btn primary" onclick="payGPay('${UPI}', ${amt})" style="width:100%;margin-top:10px;">Pay with Google Pay</button>
+      <button class="btn primary" onclick="payPhonePe('${UPI}', ${amt})" style="width:100%;margin-top:10px;">Pay with PhonePe</button>
+      <button class="btn primary" onclick="payPaytm('${UPI}', ${amt})" style="width:100%;margin-top:10px;">Pay with Paytm</button>
     `;
   }
 
   openPopup(
     "Scan to Pay",
     `
-      <div style="text-align:center; margin-bottom:10px;">
-        <img src="${qrImg}" 
-             width="220" 
-             height="220" 
-             style="border-radius:12px;">
+      <div style="text-align:center">
+        <img src="${qrImg}" width="220" height="220" style="border-radius:12px;">
       </div>
-
       <div class='small'>Amount: ₹${amt}</div>
-
-      ${isMobile ? "<div class='small' style='margin-top:10px;'>Or choose a UPI app:</div>" : ""}
+      ${isMobile ? "<div class='small'>Or choose a UPI app:</div>" : ""}
     `,
     `
-      ${mobileOptions}
-      <button class='btn gold' onclick="finishDeposit(${amt})" style="width:100%;margin-top:10px;">
-        DONE
-      </button>
+      ${mobileButtons}
+      <button class='btn gold' onclick="finishDeposit()" style="width:100%;margin-top:10px;">DONE</button>
     `
   );
 }
+
+/* =====================================================
+   UPI INTENT - 3 STEP UNIVERSAL FALLBACK
+===================================================== */
+function openIntent(intentURL, fallbackURL, qrFallback) {
+  let tried = false;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.src = intentURL;
+  document.body.appendChild(iframe);
+
+  // Fallback after 1.2s
+  setTimeout(() => {
+    if (!tried) {
+      tried = true;
+      window.location.href = fallbackURL;
+    }
+  }, 1200);
+
+  // Final fallback after 2.2s → QR popup
+  setTimeout(() => {
+    if (!tried) {
+      tried = true;
+      qrFallback();
+    }
+  }, 2200);
+}
+
+/* =====================================================
+   PAY WITH GOOGLE PAY
+===================================================== */
+function payGPay(upi, amt) {
+  const intentURL =
+    `intent://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end;`;
+
+  const fallbackURL = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}`;
+
+  openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
+}
+
+/* =====================================================
+   PAY WITH PHONEPE
+===================================================== */
+function payPhonePe(upi, amt) {
+  const intentURL = `phonepe://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
+  const fallbackURL = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}`;
+
+  openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
+}
+
+/* =====================================================
+   PAY WITH PAYTM
+===================================================== */
+function payPaytm(upi, amt) {
+  const intentURL = `paytm://upi/pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
+  const fallbackURL = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}`;
+
+  openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
+}
+
+/* =====================================================
+   FINISH DEPOSIT
+===================================================== */
+function finishDeposit() {
+  const amt = __lastDepositAmt;
+
+  closePopup();
+
+  const id = randomID();
+  const d = {
+    id,
+    owner: currentUser,
+    amount: amt,
+    status: "pending",
+    created: now()
+  };
+
+  const arr = getStore("deposits", []);
+  arr.unshift(d);
+  setStore("deposits", arr);
+
+  if (firebaseEnabled && db) writeDoc("deposits", id, d);
+
+  renderTables();
+  showMessage("Deposit request submitted!", "success");
+}
+
 /* =====================================================
    WITHDRAW
 ===================================================== */
@@ -1364,6 +1429,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 
 
 

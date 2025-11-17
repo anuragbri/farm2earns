@@ -261,7 +261,6 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 
       <select id="depositType" style="margin-top:10px;width:100%;padding:10px;border-radius:8px;background:#0b0b0f;color:#fff">
         <option value="qr">Pay via QR</option>
-        <option value="upi">Pay via UPI ID</option>
       </select>
 
       <button class="btn gold" onclick="startDeposit()" style="margin-top:10px;width:100%">Continue</button>
@@ -956,73 +955,59 @@ function startDeposit() {
   if (amt > 20000) return showMessage("Max ₹20,000", "error");
 
   if (type === "qr") depositViaQR(amt);
-  else depositViaUPI(amt);
+  else if (type === "phone") depositViaPhoneNumber(amt); // optional
 }
 
-
+/* =====================================================
+   QR DEPOSIT (NO MOBILE NUMBER, NO UPI TEXT SHOWN)
+===================================================== */
 function depositViaQR(amt) {
-  const upiLink = `upi://pay?pa=${UPI_ID}&pn=Farm2Earn&am=${amt}&cu=INR`;
-  const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
+  const upi = "Q424657914@ybl";
+
+  // UPI Link used in QR + UPI App Opening
+  const upiLink = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
+
+  // QR Image
+  const qrImg = 
+    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
 
   openPopup(
-    "Scan OR Tap to Pay",
+    "Scan to Pay",
     `
-      <div style="position:relative; width:220px; height:220px; margin:0 auto;">
-
-        <img src="${qrImg}"
-             width="220" height="220"
-             style="border-radius:10px; pointer-events:none;">
-
-        <!-- CLICKABLE ONLY ON QR BOX -->
-        <div onclick="window.location.href='${upiLink}'"
-             style="
-               position:absolute;
-               top:0; left:0;
-               width:220px;
-               height:220px;
-               cursor:pointer;
-               z-index:20;
-             ">
-        </div>
-
+      <div style="text-align:center; margin-bottom:10px;">
+        <img src="${qrImg}" 
+             width="220" height="220" 
+             style="border-radius:12px;">
       </div>
 
-      <div class='small' style="margin-top:10px;">UPI: <b>${UPI_ID}</b></div>
       <div class='small'>Amount: ₹${amt}</div>
+
+      <div class='small' style="margin-top:10px;">
+        If scanning doesn't work, tap below to open UPI App.
+      </div>
     `,
-    `<button class='btn gold' onclick="finishDeposit(${amt})">DONE</button>`
-
-
+    `
+      <button class='btn primary' onclick="openUPIApp('${upi}', ${amt})">
+        Open UPI App
+      </button>
+      <button class='btn gold' onclick="finishDeposit(${amt})">
+        DONE
+      </button>
+    `
   );
 }
 
-
-
-function depositViaUPI(amt) {
-  openPopup(
-    "Pay via UPI",
-    `<input id="userUpi" class="in" placeholder="Your UPI ID">`,
-    `<button class='btn gold' onclick="makeUPIPayment(${amt})">Pay Now</button>`
-  );
-}
-
-function makeUPIPayment(amt) {
-  const upi = document.getElementById("userUpi").value.trim();
-  if (!upi) return showMessage("Enter UPI!", "error");
-
-  let me = ensureUser();
-  me.upi = upi;
-  users[currentUser] = me;
-  setStore("users", users);
-  if (firebaseEnabled && db) writeDoc("users", currentUser, me);
-
-  const link = `upi://pay?pa=${UPI_ID}&pn=Farm2Earn&am=${amt}`;
+/* =====================================================
+   OPEN UPI APP BUTTON FUNCTION
+===================================================== */
+function openUPIApp(upi, amt) {
+  const link = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
   window.location.href = link;
-
-  popupBody.innerHTML = "Complete payment then press DONE";
-  popupActions.innerHTML = `<button class='btn gold' onclick="finishDeposit(${amt})">DONE</button>`;
 }
 
+/* =====================================================
+   FINISH DEPOSIT (SAME AS BEFORE)
+===================================================== */
 function finishDeposit(amt) {
   closePopup();
 
@@ -1035,16 +1020,16 @@ function finishDeposit(amt) {
     created: now()
   };
 
-  // Save to LocalStorage (same as before)
+  // Save to LocalStorage
   const arr = getStore("deposits", []);
   arr.unshift(d);
   setStore("deposits", arr);
+
   if (firebaseEnabled && db) writeDoc("deposits", id, d);
 
   renderTables();
   showMessage("Deposit request submitted!", "success");
 }
-
 /* =====================================================
    WITHDRAW
 ===================================================== */
@@ -1381,4 +1366,5 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
+
 

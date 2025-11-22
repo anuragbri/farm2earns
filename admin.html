@@ -298,7 +298,16 @@ const cfgs = {
   potato: { lotSize: 25, chance: 2, returnPerItem: 25, costPerLot: 250 }
 };
 
-const cfg=cfgs[f.crop]||cfgs.tomato; let totalWins=0; let perLotWins=[]; if(mode==='win'){ for(let l=0;l<f.lots;l++){ perLotWins.push(cfg.lotSize); totalWins+=cfg.lotSize; } } else if(mode==='lose'){ for(let l=0;l<f.lots;l++){ perLotWins.push(0); } totalWins=0; } else { for(let l=0;l<f.lots;l++){ let lotWins=0; for(let i=0;i<cfg.lotSize;i++){ if(Math.random()*100<=cfg.chance) lotWins++; } perLotWins.push(lotWins); totalWins+=lotWins; } } const totalReturn = totalWins * cfg.returnPerItem; const profit = totalReturn - f.cost; f.status='finished'; f.wins=totalWins; f.perLotWins=perLotWins; f.profit=profit; f.finishedAt=now(); farms[idx]=f; setStore('farms',farms); if(firebaseEnabled && db) writeDoc('farms', f.id, f); const users=getStore('users',{}); if(!users[f.owner]){ addLog('force-settle-user-missing', f.id); renderFarms(); return alert('Owner missing'); } users[f.owner].balance = Number(users[f.owner].balance||0)+Number(totalReturn); users[f.owner].stats = users[f.owner].stats||{farms:0,wins:0,profit:0}; users[f.owner].stats.farms=(users[f.owner].stats.farms||0)+1; users[f.owner].stats.wins=(users[f.owner].stats.wins||0)+totalWins; users[f.owner].stats.profit=(users[f.owner].stats.profit||0)+profit; setStore('users',users); if(firebaseEnabled && db) writeUser(f.owner, users[f.owner]); addLog('force-settle', `${id} ${mode} profit:${profit}`); renderFarms(); renderUsers(); recalcAllStats(); alert(`Farm ${id} settled (${mode}). Profit: ${formatINR(profit)}`); }
+const cfg=cfgs[f.crop]||cfgs.tomato; let totalWins=0; let perLotWins=[]; if(mode==='win'){ for(let l=0;l<f.lots;l++){ perLotWins.push(cfg.lotSize); totalWins+=cfg.lotSize; } } else if(mode==='lose'){ for(let l=0;l<f.lots;l++){ perLotWins.push(0); } totalWins=0; } else { for(let l=0;l<f.lots;l++){ let lotWins=0; for(let i=0;i<cfg.lotSize;i++){ if(Math.random()*100<=cfg.chance) lotWins++; } perLotWins.push(lotWins); totalWins+=lotWins; } } const totalReturn = totalWins * cfg.returnPerItem;
+ const profit = totalReturn - f.cost;
+  f.status='finished';
+  f.wins=totalWins;
+  f.perLotWins=perLotWins; 
+  f.profit=profit; 
+  f.finishedAt=now(); 
+  f.status='finished';
+  farms[idx]=f; setStore('farms',farms); 
+  if(firebaseEnabled && db) writeDoc('farms', f.id, f); const users=getStore('users',{}); if(!users[f.owner]){ addLog('force-settle-user-missing', f.id); renderFarms(); return alert('Owner missing'); } users[f.owner].balance = Number(users[f.owner].balance||0)+Number(totalReturn); users[f.owner].stats = users[f.owner].stats||{farms:0,wins:0,profit:0}; users[f.owner].stats.farms=(users[f.owner].stats.farms||0)+1; users[f.owner].stats.wins=(users[f.owner].stats.wins||0)+totalWins; users[f.owner].stats.profit=(users[f.owner].stats.profit||0)+profit; setStore('users',users); if(firebaseEnabled && db) writeUser(f.owner, users[f.owner]); addLog('force-settle', `${id} ${mode} profit:${profit}`); renderFarms(); renderUsers(); recalcAllStats(); alert(`Farm ${id} settled (${mode}). Profit: ${formatINR(profit)}`); }
 
 /* LOGS */
 function renderLogs(){ const logs=getStore('adminLogs',[]); const tbody=document.querySelector('#logsTbl tbody'); tbody.innerHTML=''; logs.forEach(l=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${fmtTime(l.t)}</td><td>${l.action}</td><td>${l.details||''}</td>`; tbody.appendChild(tr); }); }

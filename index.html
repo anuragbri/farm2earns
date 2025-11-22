@@ -1,4 +1,4 @@
-<!doctype html>
+<<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
@@ -162,6 +162,28 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
   background:rgba(255,255,255,0.05);
   margin:14px 0;
 }
+/* 🌱 Seed drop animation */
+.seed {
+  position: fixed;
+  top: -30px;
+  font-size: 24px;
+  pointer-events: none;
+  animation: fall 1.2s ease-out forwards, bounce 0.4s ease-out 1s forwards;
+  z-index: 9999;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-30px) scale(1); opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(120vh) scale(1.2); opacity: 0.8; }
+}
+
+@keyframes bounce {
+  0% { transform: translateY(120vh) scale(1); }
+  50% { transform: translateY(118vh) scale(1.1); }
+  100% { transform: translateY(120vh) scale(1); }
+}
+
 </style>
  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -720,10 +742,28 @@ function logoutUser() {
   showMessage("Logged out!", "info");
   setTimeout(() => (window.location.href = "login.html"), 600);
 }
+/* =====================================================
+   SEED DROP ANIMATION
+===================================================== */
+function dropSeeds(emoji="🌱") {
+  for (let i = 0; i < 7; i++) {
+    const seed = document.createElement("div");
+    seed.className = "seed";
+    seed.innerText = emoji;
 
+    seed.style.left = Math.random() * window.innerWidth + "px";
+    seed.style.animationDelay = (Math.random() * 0.3) + "s";
+    seed.style.transform = "rotate(" + (Math.random()*60 - 30) + "deg)";
+
+    document.body.appendChild(seed);
+
+    setTimeout(() => seed.remove(), 1500);
+  }
+}
 /* =====================================================
    ****** FARMING (WORKING PERFECT) ******
 ===================================================== */
+
 function openFarmPopup(cropKey) {
   const crop = CROP[cropKey];
   const lots = Math.max(1, parseInt(document.getElementById(cropKey + "Lots").value) || 1);
@@ -743,6 +783,7 @@ function openFarmPopup(cropKey) {
 
 function confirmStartFarm(cropKey, lots) {
   closePopup();
+  dropSeeds(cropKey === "tomato" ? "🍅" : cropKey === "carrot" ? "🥕" : "🥔");
   startFarm(cropKey, lots);
 }
 
@@ -809,111 +850,106 @@ function settleFarm(id) {
   if (idx === -1) return;
 
   const f = farms[idx];
-  if (f.status !== "growing") return;
+
+  // ⭐ ADMIN FORCE SETTLED FARM — DO NOT RE-CALCULATE
+  if (f.adminForced) {
+    farms[idx] = f;
+    setStore("farms", farms);
+
+    let me = ensureUser();
+    users[currentUser] = me;
+    setStore("users", users);
+
+    renderHeader();
+    renderTables();
+
+    openPopup(
+      "🌾 Admin Settled Farm",
+      `<div><b>Wins:</b> ${f.wins}</div>
+       <div><b>Profit:</b> ₹${f.profit}</div>
+       <h2>${f.profit >= 0 ? "🎉 WIN" : "❌ LOSS"}</h2>`,
+      `<button class='btn gold' onclick='closePopup()'>OK</button>`
+    );
+
+    return; // ⭐ STOP normal settlement
+  }
+
+  // (OLD CODE BELOW CONTINUES FOR NORMAL FARM)
+
 
   const cfg = CROP[f.crop];
-  let totalWins = 0;
-  let perLotWins = [];
 
-  for (let l = 0; l < f.lots; l++) {
-    let wins = 0;
-    for (let i = 0; i < cfg.lotSize; i++) {
-      if (Math.random() * 100 <= cfg.chance) wins++;
+  // ⭐ GET ADMIN MODE LIVE
+  const settings = getStore("adminSettings", { globalForceMode: "normal" });
+  const mode = settings.globalForceMode;
+
+  let totalWins = 0;
+
+  if (mode === "force-win") {
+    // ⭐ Full win
+    totalWins = cfg.lotSize * f.lots;
+
+  } else if (mode === "force-lose") {
+    // ⭐ Full loss
+    totalWins = 0;
+
+  } else {
+    // ⭐ Normal 3–5% chance
+    for (let i = 0; i < cfg.lotSize * f.lots; i++) {
+      if (Math.random() * 100 < cfg.chance) totalWins++;
     }
-    perLotWins.push(wins);
-    totalWins += wins;
   }
 
   const totalReturn = totalWins * cfg.returnPerItem;
   const profit = totalReturn - f.cost;
 
-  // Update farm
   f.status = "finished";
   f.wins = totalWins;
   f.profit = profit;
-  f.finishedAt = now();
+
   farms[idx] = f;
   setStore("farms", farms);
-  if (firebaseEnabled && db) writeDoc("farms", f.id, f);
 
-  // Update user
   let users = getStore("users", {});
   let me = users[currentUser];
   me.balance += totalReturn;
-  me.stats.farms += 1;
-  me.stats.wins += totalWins;
-  me.stats.profit += profit;
 
   users[currentUser] = me;
   setStore("users", users);
-  if (firebaseEnabled && db) writeDoc("users", currentUser, me);
 
   renderHeader();
   renderTables();
 
   openPopup(
-    "🌾 Farming Result",
-    `<pre>
-Farm ID: ${f.id}
-Wins: ${totalWins}
-Profit: ${formatAmt(profit)}
-</pre>`,
+    "🌾 Result",
+    `
+      <div><b>Wins:</b> ${totalWins}</div>
+      <div><b>Profit:</b> ₹${profit}</div>
+      <h2>${profit >= 0 ? "🎉 WIN" : "❌ LOSS"}</h2>
+    `,
     `<button class='btn gold' onclick='closePopup()'>OK</button>`
   );
 }
 
+
+
 /* =====================================================
    QUICK FARM
 ===================================================== */
-function quickFarm50() {
-  let me = ensureUser();
-  if (me.balance < 50) return showMessage("Need ₹50!", "error");
-
-  me.balance -= 50;
-  users[currentUser] = me;
-  setStore("users", users);
-  if (firebaseEnabled && db) writeDoc("users", currentUser, me);
-
-  const id = randomID();
-
-  const farm = {
-    id,
-    owner: currentUser,
-    crop: "tomato",
-    cropName: "Tomato",
-    lots: 1,
-    lotSize: 5,
-    cost: 50,
-    start: now(),
-    finish: now() + 3000,
-    status: "growing"
-  };
-
-  const arr = getStore("farms", []);
-  arr.unshift(farm);
-  setStore("farms", arr);
-  if (firebaseEnabled && db) writeDoc("farms", farm.id, farm);
-
-  renderHeader();
-  renderTables();
-
-  openPopup("Quick Farm", "Running...", "", true);
-
-  setTimeout(() => settleQuickFarm(id), 3000);
-}
-
 function settleQuickFarm(id) {
   const farms = getStore("farms", []);
   const idx = farms.findIndex((f) => f.id === id);
   if (idx === -1) return;
 
   const f = farms[idx];
-  console.log(CROP.tomato)
+
+  // FIXED: cfg add
+  const cfg = CROP.tomato;
+
   let wins = 0;
   for (let i = 0; i < 5; i++) {
-  if (Math.random() * 100 <= cfg.chance) wins++;
-}
-
+    if (Math.random() * 100 < cfg.chance) wins++;
+  }
 
   const totalReturn = wins * cfg.returnPerItem;
   const profit = totalReturn - 50;
@@ -928,6 +964,7 @@ function settleQuickFarm(id) {
 
   let me = ensureUser();
   me.balance += totalReturn;
+
   me.stats.farms += 1;
   me.stats.wins += wins;
   me.stats.profit += profit;
@@ -942,6 +979,7 @@ function settleQuickFarm(id) {
   closePopup();
   showMessage(`Quick Profit: ${formatAmt(profit)}`, profit >= 0 ? "success" : "error");
 }
+
 
 /* =====================================================
    DEPOSIT
@@ -1413,6 +1451,10 @@ async function initialFirestoreSync() {
 /* =====================================================
    INIT
 ===================================================== */
+window.addEventListener("load", () => {
+    show("farm");
+    window.scrollTo(0, 0);
+});
 document.addEventListener("DOMContentLoaded", async () => {
   // try to sync from Firestore on load (best-effort)
   if (firebaseEnabled && db) {
@@ -1429,7 +1471,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 </body>
 </html>
-
 
 
 

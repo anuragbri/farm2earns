@@ -1476,35 +1476,72 @@ function getActiveFruitPeriod() {
 /* =====================================================
    GENERATE REAL RANDOM RESULT
 ===================================================== */
-async function generateFruitResult(periodID) {
-  let winFruit = null;
+async function generateFruitResult(period) {
+    console.log("🎯 Generating result for:", period);
 
-  // 1️⃣ Check if force result exists
-  if (firebaseEnabled && db) {
-    const forced = await db.collection("forceFruitResult").doc(periodID).get();
-    if (forced.exists) {
-      winFruit = forced.data().fruit;
-      console.log("🎯 Forced RESULT:", winFruit);
+    // 1) Check forced winner
+    let forced = null;
+    if (firebaseEnabled && db) {
+        let doc = await db.collection("forceFruitResult").doc(period).get();
+        if (doc.exists && doc.data().locked) {
+            forced = doc.data().fruit;
+        }
     }
-  }
 
-  // 2️⃣ If not forced → random result
-  if (!winFruit) {
-    const fruits = ["apple","avocado","banana","grapes","orange","mango"];
-    winFruit = fruits[Math.floor(Math.random() * fruits.length)];
-  }
+    // 2) Random pick if no forced
+    let fruits = ["apple", "banana", "mango", "grapes", "avocado", "orange"];
+    let winFruit = forced || fruits[Math.floor(Math.random() * fruits.length)];
+    console.log("🏆 Winner =", winFruit);
 
-  const entry = {
-    period: periodID,
-    fruit: winFruit,
-    time: Date.now()
-  };
+    // 3) Save in Public History
+    if (firebaseEnabled && db) {
+        db.collection("fruitPublicHistory").doc(period).set({
+            period: period,
+            fruit: winFruit,
+            time: Date.now()
+        });
+    }
 
-  // Save final result
-  db.collection("fruitResults").doc(periodID).set(entry);
-  db.collection("fruitPublicHistory").add(entry);
+    // 4) Fetch winners bets
+    const winners = await db.collection("fruitBets")
+        .where("period", "==", period)
+        .where("fruit", "==", winFruit)
+        .get();
 
-  return winFruit;
+    if (winners.empty) {
+        console.log("❌ No winners in this round");
+        return winFruit;
+    }
+
+    // Multiplier
+    let mult = getStore("fruitMultiplier", 2);
+
+    // 5) PROCESS WINNERS
+    let users = getStore("users", {});
+    winners.forEach(async (doc) => {
+        const b = doc.data();
+        let uid = b.uid;
+
+        if (!users[uid]) return;
+
+        let winAmount = (b.total || (b.qty * b.amount)) * mult;
+
+        users[uid].balance = Number(users[uid].balance || 0) + winAmount;
+
+        console.log(`💰 Added ₹${winAmount} to ${uid}`);
+
+        // Save local
+        setStore("users", users);
+
+        // Save Firebase
+        if (firebaseEnabled && db) {
+            await writeUser(uid, users[uid]);
+        }
+    });
+
+    console.log("🎉 All winnings added successfully!");
+
+    return winFruit;
 }
 
 
@@ -2170,6 +2207,7 @@ window.onload = () => {
 
 </body>
 </html>
+
 
 
 

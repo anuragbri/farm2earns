@@ -682,7 +682,7 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
     </div>
 
 
-  <div class="footer">© 2025 Farm2Earn</div>
+  <div class="footer">© 2025 Farm2Earn — stylish demo</div>
 </div>
 
 <!-- overlay popup (single shared) -->
@@ -704,6 +704,12 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 <div id="msgContainer"></div>
 
 <script>
+  window.onload = () => {
+    renderHeader();
+    loadPublicFruitHistory();
+    loadFruitBetHistory();
+};
+
 /* =====================================================
    CONFIG
 ===================================================== */
@@ -794,6 +800,8 @@ if (!getStore("withdraws", null)) setStore("withdraws", []);
 ===================================================== */
 let users = getStore("users", {});   // GLOBAL users
 let currentUser = getStore("currentUser", null);   // ⭐ MISSING LINE ADDED
+// FORCE LOAD USER DATA AGAIN ON REFRESH
+users = getStore("users", {});
 
 function ensureUser() {
   // Always load fresh users
@@ -2140,9 +2148,16 @@ setTimeout(() => {
     loadFruitBetHistory();   // ⭐ load your bet history also
 }, 2000);
 
+// 🔥 FIX 2: Page load par header data update
+window.onload = () => {
+    renderHeader();
+    renderProfile();
+    renderInventory();
+    renderTables();
+};
+
 
 </script>
-
 
 
 <!-- Firebase SDK (optional) -->
@@ -2151,7 +2166,6 @@ setTimeout(() => {
 
 </body>
 </html>
-
 
 
 

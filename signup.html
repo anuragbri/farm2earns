@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Farm2Earn — Signup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<!-- 🌟 Firebase SDK COMPAT MODE (REQUIRED) -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  body{
+    background:#05050a;
+    font-family:Inter,Arial,system-ui;
+    color:#fff;
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  .box{
+    width:92%; max-width:420px;
+    padding:26px;
+    border-radius:20px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.15);
+    backdrop-filter:blur(14px);
+    text-align:center;
+    box-shadow:0 0 40px rgba(0,0,0,0.5);
+    animation: fadeIn .5s ease;
+  }
+
+  @keyframes fadeIn{
+    from{opacity:0; transform:translateY(20px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .logo-img{
+    width:120px; height:120px; border-radius:18px;
+    margin:0 auto 10px;
+    display:block;
+    box-shadow:0 0 20px rgba(246,201,75,0.4);
+  }
+
+  input{
+    width:100%;
+    padding:14px;
+    margin-top:14px;
+    background:rgba(255,255,255,0.12);
+    border:none;
+    color:#fff;
+    border-radius:12px;
+    font-size:16px;
+    transition:.2s;
+  }
+  
+  input:focus{
+    background:rgba(255,255,255,0.18);
+    border:1px solid #f6c94b;
+  }
+
+  .btn{
+    width:100%;
+    padding:14px;
+    margin-top:18px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(90deg,#ffd86b,#f6c94b);
+    font-weight:800;
+    font-size:17px;
+    color:#111;
+    cursor:pointer;
+    box-shadow:0 6px 20px rgba(246,201,75,0.3);
+    transition:.2s;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+
+  .small{
+    margin-top:12px;
+    color:#c3c6d1;
+    font-size:14px;
+  }
+  
+  .link{
+    color:#f6c94b;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  #msg{
+    margin-top:10px;
+    color:#ff6b6b;
+    font-weight:700;
+    min-height:18px;
+  }
+
+  .modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+  }
+  .card{
+    width:90%; max-width:420px;
+    background:#0d0d10;
+    padding:20px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,0.1);
+    text-align:center;
+  }
+
+  .pill{
+    padding:10px;
+    background:#111;
+    border-radius:12px;
+    margin-top:12px;
+    color:#fff;
+    word-break:break-all;
+    font-size:14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="box">
+  <img src="logo.png" class="logo-img">
+
+  <h2>Create Your Farm2Earn Account</h2>
+
+  <input id="name" placeholder="Full name">
+  <input id="phone" placeholder="Phone number (10 digits)" maxlength="10" inputmode="numeric">
+  <input id="password" type="password" placeholder="Create password">
+  <input id="ref" placeholder="Referral code (optional)">
+
+  <button class="btn" onclick="doSignup()">Sign Up & Start Farming</button>
+
+  <div class="small">
+    Already have an account?
+    <span class="link" onclick="gotoLogin()">Login</span>
+  </div>
+
+  <div id="msg"></div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="card">
+    <div style="font-size:18px;font-weight:700;color:#f6c94b">Account Created 🎉</div>
+    <div id="modalTxt" style="margin-top:8px;"></div>
+    <div class="pill" id="refLink">—</div>
+  </div>
+</div>
+
+<script>
+/*** LOCAL STORAGE FUNCS ***/
+function getStore(k,d){ try{return JSON.parse(localStorage.getItem(k)) ?? d;}catch{return d;} }
+function setStore(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+/*** FIREBASE INIT — NOW FIXED ***/
+const firebaseConfig = {
+  apiKey: "AIzaSyDQsF4P9UmS0TZArvtvV6e_Fx3pBgNCBaY",
+  authDomain: "farm2earning.firebaseapp.com",
+  projectId: "farm2earning",
+  storageBucket: "farm2earning.firebasestorage.app",
+  messagingSenderId: "787325025832",
+  appId: "1:787325025832:web:d30236c045fc5f3d7abf1d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/*** UID GENERATOR ***/
+function randomID(){
+  const L="ABCDEFGHIJKLMNOPQRSTUVWXYZ", N="0123456789";
+  return "F2E-" +
+    L[Math.floor(Math.random()*L.length)] +
+    L[Math.floor(Math.random()*L.length)] +
+    N[Math.floor(Math.random()*N.length)] +
+    N[Math.floor(Math.random()*N.length)];
+}
+
+/*** GO LOGIN ***/
+function gotoLogin(){
+  location.href = "login.html";
+}
+
+/*** MAIN SIGNUP FUNCTION ***/
+async function doSignup(){
+  const nameVal = document.getElementById("name").value.trim();
+  const phoneVal = document.getElementById("phone").value.trim();
+  const passVal = document.getElementById("password").value.trim();
+  const refVal = document.getElementById("ref").value.trim().toUpperCase();
+  const msg = document.getElementById("msg");
+
+  msg.innerText = "";
+
+  if(!nameVal || !phoneVal || !passVal){
+    msg.innerText = "Fill all fields!";
+    return;
+  }
+  if(!/^\d{10}$/.test(phoneVal)){
+    msg.innerText = "Invalid phone number!";
+    return;
+  }
+
+  let users = getStore("users", {});
+
+  // check duplicate phone
+  if(Object.values(users).some(u => u.phone == phoneVal)){
+    msg.innerText = "Phone already registered!";
+    return;
+  }
+
+  const uid = randomID();
+
+  /** NEW USER OBJECT **/
+  const newUser = {
+    id: uid,
+    name: nameVal,
+    phone: phoneVal,
+    password: passVal,
+    balance: 100,
+    coins: 20,
+    joined: Date.now(),
+    upi: "",
+    bank: null,
+    daily: { lastClaim:"", streak:0 },
+    inventory: {},
+    stats: { farms:0, wins:0, profit:0 },
+    referrals: []
+  };
+
+  // LOCAL SAVE
+  users[uid] = newUser;
+  setStore("users", users);
+  setStore("currentUser", uid);
+
+  // FIRESTORE SAVE
+  await db.collection("users").doc(uid).set(newUser);
+
+  // REFERRAL BONUS
+  if(refVal && users[refVal]){
+    users[refVal].coins += 20;
+    users[refVal].referrals.push(uid);
+
+    setStore("users", users);
+
+    await db.collection("users").doc(refVal).update({
+      coins: users[refVal].coins,
+      referrals: users[refVal].referrals
+    });
+  }
+
+  // SHOW SUCCESS
+  const base = location.origin + location.pathname.replace(/\/[^/]*$/, "/");
+  const refLink = base + "signup.html?ref=" + uid;
+
+  document.getElementById("modalTxt").innerText = "Your UID: " + uid;
+  document.getElementById("refLink").innerText = refLink;
+  document.getElementById("modal").style.display="flex";
+
+  setTimeout(()=> location.href = "index.html", 1200);
+}
+</script>
+
+</body>
+</html>

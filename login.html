@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Farm2Earn — Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+<!-- 🌟 FIRST LOAD FIREBASE SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Inter,Arial,system-ui;
+}
+
+body{
+  background:#05050a;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  color:#fff;
+}
+
+.box{
+  width:92%;
+  max-width:420px;
+  padding:28px;
+  border-radius:22px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  backdrop-filter:blur(16px);
+  box-shadow:0 0 50px rgba(0,0,0,0.5);
+  animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity:0; transform:translateY(20px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+.logo-img{
+  width:120px;
+  height:120px;
+  border-radius:20px;
+  margin:0 auto 18px;
+  display:block;
+  box-shadow:0 0 25px rgba(246,201,75,0.45);
+  animation: pop 0.5s ease;
+}
+
+@keyframes pop {
+  0%{ transform:scale(0.5); opacity:0; }
+  80%{ transform:scale(1.1); opacity:1; }
+  100%{ transform:scale(1); }
+}
+
+h2{
+  font-size:26px;
+  font-weight:800;
+  color:#f6c94b;
+  text-shadow:0 0 6px rgba(246,201,75,0.3);
+}
+
+input{
+  width:100%;
+  padding:14px;
+  margin-top:18px;
+  border:none;
+  border-radius:12px;
+  background:rgba(255,255,255,0.12);
+  color:#fff;
+  font-size:16px;
+  outline:none;
+  transition:.25s;
+}
+
+input:focus{
+  border:1px solid #f6c94b;
+  background:rgba(255,255,255,0.18);
+}
+
+.btn{
+  width:100%;
+  padding:14px;
+  margin-top:22px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(90deg,#ffd86b,#f6c94b);
+  color:#111;
+  font-weight:800;
+  font-size:17px;
+  cursor:pointer;
+  box-shadow:0 6px 20px rgba(246,201,75,0.25);
+  transition:0.2s;
+}
+
+.btn:hover{
+  filter:brightness(1.05);
+  transform:translateY(-2px);
+}
+
+.small{
+  margin-top:14px;
+  font-size:14px;
+  color:#c5c5c8;
+}
+
+.link{
+  color:#f6c94b;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.link:hover{
+  text-decoration:underline;
+}
+
+#msg{
+  margin-top:14px;
+  font-weight:700;
+  font-size:14px;
+  min-height:20px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="box">
+  <img src="logo.png" class="logo-img">
+  <h2>Farm2Earn Login</h2>
+
+  <input id="uidOrPhone" placeholder="Enter UID or Phone Number">
+  <input id="password" type="password" placeholder="Password">
+
+  <button class="btn" onclick="doLogin()">Login</button>
+
+  <div class="small">
+    Don’t have an account?
+    <span class="link" onclick="gotoSignup()">Create One</span>
+  </div>
+
+  <div id="msg"></div>
+</div>
+
+
+<!-- 🌟 ALL JS MUST BE AFTER FIREBASE SDK -->
+<script>
+
+/*** 🔥 LOCAL STORAGE HELPERS ***/
+function getStore(k, d){ try{return JSON.parse(localStorage.getItem(k)) ?? d;}catch{return d;} }
+function setStore(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+/*** 🔥 FIREBASE INIT (NOW WORKING 100%) ***/
+const firebaseConfig = {
+  apiKey: "AIzaSyDQsF4P9UmS0TZArvtvV6e_Fx3pBgNCBaY",
+  authDomain: "farm2earning.firebaseapp.com",
+  projectId: "farm2earning",
+  storageBucket: "farm2earning.firebasestorage.app",
+  messagingSenderId: "787325025832",
+  appId: "1:787325025832:web:d30236c045fc5f3d7abf1d"
+};
+
+firebase.initializeApp(firebaseConfig);   // ✔ firebase is now defined
+const db = firebase.firestore();          // ✔ db now initialized
+
+/*** SIGNUP REDIRECT ***/
+function gotoSignup(){
+  location.href = "signup.html";
+}
+
+/*** 🔥 LOGIN FUNCTION — FULLY WORKING ***/
+async function doLogin(){
+  const input = document.getElementById("uidOrPhone").value.trim();
+  const pass = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
+
+  msg.innerText = "";
+  msg.style.color = "#ff6b6b";
+
+  if(!input || !pass){
+    msg.innerText = "Enter UID/Phone & Password!";
+    return;
+  }
+
+  let uid = null;
+  let user = null;
+
+  try {
+    // --- UID LOGIN ---
+    if(input.toUpperCase().startsWith("F2E-")) {
+      const snap = await db.collection("users").doc(input.toUpperCase()).get();
+      if(!snap.exists){
+        msg.innerText = "Invalid UID!";
+        return;
+      }
+      uid = snap.id;
+      user = snap.data();
+    }
+
+    // --- PHONE LOGIN ---
+    else if(/^[0-9]{10}$/.test(input)){
+      const snap = await db.collection("users")
+                           .where("phone","==",input)
+                           .get();
+      if(snap.empty){
+        msg.innerText = "Phone not registered!";
+        return;
+      }
+      const doc = snap.docs[0];
+      uid = doc.id;
+      user = doc.data();
+    }
+
+    else {
+      msg.innerText = "Enter valid UID (F2E-XXXX) or 10-digit Phone!";
+      return;
+    }
+
+    // Password Check
+    if(user.password !== pass){
+      msg.innerText = "Incorrect Password!";
+      return;
+    }
+
+    // Save Locally
+    let users = getStore("users", {});
+    users[uid] = user;
+    setStore("users", users);
+    setStore("currentUser", uid);
+
+    msg.style.color = "#7ef2b3";
+    msg.innerText = "Login successful!";
+
+    setTimeout(()=> location.href = "index.html", 700);
+
+  } catch(err){
+    console.error(err);
+    msg.innerText = "Login error!";
+  }
+}
+
+
+</script>
+
+</body>
+</html>

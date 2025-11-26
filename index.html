@@ -1673,30 +1673,26 @@ function startDeposit() {
   __lastDepositAmt = amt;
 
   if (type === "qr") return depositViaQR(amt);
-  if (type === "gpay") return payGPay(UPI, amt);
-  if (type === "phonepe") return payPhonePe(UPI, amt);
-  if (type === "paytm") return payPaytm(UPI, amt);
+  if (type === "gpay") return payGPay(UPI_ID, amt);
+  if (type === "phonepe") return payPhonePe(UPI_ID, amt);
+  if (type === "paytm") return payPaytm(UPI_ID, amt);
 }
+
 
 /* =====================================================
    UNIVERSAL PAYMENT POPUP (QR)
 ===================================================== */
 function depositViaQR(amt) {
-  const upiLink = `upi://pay?pa=${UPI}&pn=Farm2Earn&am=${amt}&cu=INR`;
+  const upiLink = `upi://pay?pa=${UPI_ID}&pn=Farm2Earn&am=${amt}&cu=INR`;
 
-  const qrImg = 
+  const qrImg =
     `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
 
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  let mobileButtons = "";
-  if (isMobile) {
-    mobileButtons = `
-      <button class="btn primary" onclick="payGPay('${UPI}', ${amt})" style="width:100%;margin-top:10px;">Pay with Google Pay</button>
-      <button class="btn primary" onclick="payPhonePe('${UPI}', ${amt})" style="width:100%;margin-top:10px;">Pay with PhonePe</button>
-      <button class="btn primary" onclick="payPaytm('${UPI}', ${amt})" style="width:100%;margin-top:10px;">Pay with Paytm</button>
-    `;
-  }
+  let mobileButtons = `
+    <button class="btn primary" onclick="payGPay('${UPI_ID}', ${amt})" style="width:100%;margin-top:10px;">Google Pay</button>
+    <button class="btn primary" onclick="payPhonePe('${UPI_ID}', ${amt})" style="width:100%;margin-top:10px;">PhonePe</button>
+    <button class="btn primary" onclick="payPaytm('${UPI_ID}', ${amt})" style="width:100%;margin-top:10px;">Paytm</button>
+  `;
 
   openPopup(
     "Scan to Pay",
@@ -1705,7 +1701,7 @@ function depositViaQR(amt) {
         <img src="${qrImg}" width="220" height="220" style="border-radius:12px;">
       </div>
       <div class='small'>Amount: ₹${amt}</div>
-      ${isMobile ? "<div class='small'>Or choose a UPI app:</div>" : ""}
+      <div style='margin-top:10px'>Or pay using UPI app:</div>
     `,
     `
       ${mobileButtons}
@@ -1713,6 +1709,7 @@ function depositViaQR(amt) {
     `
   );
 }
+
 
 /* =====================================================
    UPI INTENT - 3 STEP UNIVERSAL FALLBACK
@@ -1758,28 +1755,35 @@ function payGPay(upi, amt) {
    PAY WITH PHONEPE
 ===================================================== */
 function payPhonePe(upi, amt) {
-  const intentURL = `phonepe://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
-  const fallbackURL = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}`;
+    const intentURL =
+        `intent://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR#Intent;scheme=upi;package=com.phonepe.app;end;`;
 
-  openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
+    const fallbackURL =
+        `phonepe://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
+
+    openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
 }
+
 
 /* =====================================================
    PAY WITH PAYTM
 ===================================================== */
 function payPaytm(upi, amt) {
-  const intentURL = `paytm://upi/pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
-  const fallbackURL = `upi://pay?pa=${upi}&pn=Farm2Earn&am=${amt}`;
+    const intentURL =
+        `intent://pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR#Intent;scheme=upi;package=net.one97.paytm;end;`;
 
-  openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
+    const fallbackURL =
+        `paytm://upi/pay?pa=${upi}&pn=Farm2Earn&am=${amt}&cu=INR`;
+
+    openIntent(intentURL, fallbackURL, () => depositViaQR(amt));
 }
+
 
 /* =====================================================
    FINISH DEPOSIT
 ===================================================== */
 function finishDeposit() {
   const amt = __lastDepositAmt;
-
   closePopup();
 
   const id = randomID();

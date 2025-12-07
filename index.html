@@ -999,10 +999,28 @@ function coinToRupee(c) {
    CROP SETTINGS
 ===================================================== */
 const CROP = {
-  tomato: { name: "Tomato", lotSize: 20, costPerLot: 200, chance: 3, returnPerItem: 20 },
-  carrot: { name: "Carrot", lotSize: 15, costPerLot: 150, chance: 4, returnPerItem: 18 },
-  potato: { name: "Potato", lotSize: 25, costPerLot: 250, chance: 2, returnPerItem: 25 }
+  tomato: { 
+    name: "Tomato",
+    costPerLot: 200,
+    daily: 20,
+    days: 5
+  },
+
+  carrot: { 
+    name: "Carrot",
+    costPerLot: 150,
+    daily: 15,
+    days: 5
+  },
+
+  potato: { 
+    name: "Potato",
+    costPerLot: 250,
+    daily: 25,
+    days: 5
+  }
 };
+
 function loadPublicFruitHistory() {
     if (!firebaseEnabled || !db) return;
 
@@ -1257,18 +1275,25 @@ function openFarmPopup(cropKey) {
   const crop = CROP[cropKey];
   const lots = Math.max(1, parseInt(document.getElementById(cropKey + "Lots").value) || 1);
 
+  const invest = crop.costPerLot * lots;
+  const daily = crop.daily * lots;
+  const total = daily * crop.days;
+
   openPopup(
     `Start ${crop.name}`,
     `
-    <div><b>${crop.name}</b> — ${lots} lot(s)</div>
-    <div class='small'>
-      Total Qty: <b>${crop.lotSize * lots}</b><br>
-      Total Cost: <b>${formatAmt(crop.costPerLot * lots)}</b><br>
-      Time: <b>5 minutes</b>
-    </div>`,
+      <div><b>${crop.name}</b> — ${lots} lot(s)</div>
+      <div class='small'>
+        Invest: <b>₹${invest}</b><br>
+        Daily Return: <b>₹${daily}</b><br>
+        Total Return: <b>₹${total}</b><br>
+        Duration: <b>${crop.days} Days</b>
+      </div>
+    `,
     `<button class='btn gold' onclick="confirmStartFarm('${cropKey}', ${lots})">Confirm</button>`
   );
 }
+
 
 function confirmStartFarm(cropKey, lots) {
   closePopup();
@@ -1281,28 +1306,34 @@ function startFarm(cropKey, lots) {
   let me = ensureUser();
   const crop = CROP[cropKey];
 
-  const totalCost = crop.costPerLot * lots;
-  if (me.balance < totalCost) return showMessage("Insufficient balance!", "error");
+  const invest = crop.costPerLot * lots;
+  const daily = crop.daily * lots;
+  const total = daily * crop.days;
 
-  me.balance -= totalCost;
+  if (me.balance < invest)
+      return showMessage("Insufficient Balance!", "error");
+
+  me.balance -= invest;
   users[currentUser] = me;
   setStore("users", users);
   if (firebaseEnabled && db) writeDoc("users", currentUser, me);
 
   const id = randomID();
-  const start = now();
 
   const farm = {
     id,
     owner: currentUser,
     crop: cropKey,
     cropName: crop.name,
-    lots,
-    lotSize: crop.lotSize,
-    cost: totalCost,
-    start,
-    finish: start + FARM_TIME_MS,
-    status: "growing"
+    invest,
+    dailyReturn: daily,
+    totalReturn: total,
+    daysCompleted: 0,
+    totalDays: crop.days,
+    nextPayout: Date.now() + 24*60*60*1000,
+    createdAt: Date.now(),
+    earned: 0,
+    status: "running"
   };
 
   const arr = getStore("farms", []);
@@ -1313,25 +1344,42 @@ function startFarm(cropKey, lots) {
   renderHeader();
   renderTables();
 
-  openPopup(
-    "🌾 Farming Started",
-    `<div class='small'>Farm running... ID: <b>${id}</b></div>`,
-    `<button class='btn' onclick='closePopup()'>Minimize</button>`,
-    true
-  );
-
-  let startTS = Date.now();
-  let timer = setInterval(() => {
-    let pct = Math.min(100, ((Date.now() - startTS) / FARM_TIME_MS) * 100);
-    popupProgressBar.style.width = pct + "%";
-
-    if (pct >= 100) {
-      clearInterval(timer);
-      closePopup();
-      settleFarm(id);
-    }
-  }, 1000);
+  showMessage("Farm Started Successfully!", "success");
+  closePopup();
 }
+async function claimFarmIncome(farmId) {
+
+  const farmRef = db.collection("farms").doc(farmId);
+  const farmSnap = await farmRef.get();
+  const farm = farmSnap.data();
+
+  if (!farm) return;
+
+  if (farm.daysCompleted >= farm.totalDays)
+      return showMessage("Farm Completed!", "info");
+
+  if (Date.now() < farm.nextPayout) {
+      let hr = Math.ceil((farm.nextPayout - Date.now()) / (1000*60*60));
+      return showMessage(`Come back after ${hr} hours`, "error");
+  }
+
+  const userRef = db.collection("users").doc(farm.owner);
+  const user = (await userRef.get()).data();
+
+  await userRef.update({
+    balance: (user.balance || 0) + farm.dailyReturn
+  });
+
+  await farmRef.update({
+    daysCompleted: farm.daysCompleted + 1,
+    earned: farm.earned + farm.dailyReturn,
+    nextPayout: Date.now() + 24*60*60*1000,
+    status: farm.daysCompleted + 1 === farm.totalDays ? "completed" : "running"
+  });
+
+  showMessage(`+₹${farm.dailyReturn} credited!`, "success");
+}
+
 
 function settleFarm(id) {
   const farms = getStore("farms", []);
@@ -2385,18 +2433,25 @@ function renderTables() {
   /* -------- FARMS (only your data) -------- */
   const farms = getStore("farms", []).filter(f => f.owner === uid);   // 🔥 FIXED
   const ft = document.querySelector("#farmsTable tbody");
-  ft.innerHTML = farms
-    .map(
-      (f) =>
-        `<tr>
-          <td>${f.id}</td>
-          <td>${f.cropName}</td>
-          <td>${f.lots}</td>
-          <td>${f.status}</td>
-          <td>${formatAmt(f.profit || 0)}</td>
-        </tr>`
-    )
-    .join("");
+ft.innerHTML = farms
+  .map(f => {
+    return `
+      <tr>
+        <td>${f.id}</td>
+        <td>${f.cropName}</td>
+        <td>${f.daysCompleted}/${f.totalDays}</td>
+        <td>${f.status}</td>
+        <td>₹${f.earned}</td>
+        <td>
+          ${f.status !== "completed"
+            ? `<button class="btn gold" onclick="claimFarmIncome('${f.id}')">Claim</button>`
+            : "Done"}
+        </td>
+      </tr>
+    `;
+  })
+  .join("");
+
 
   /* -------- DEPOSITS (only your data) -------- */
   const deps = getStore("deposits", []).filter(d => d.owner === uid);   // 🔥 FIXED

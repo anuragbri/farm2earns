@@ -295,7 +295,7 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 #countdownPopup {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.68);
+  background: rgba(0,0,0,0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -304,29 +304,33 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 }
 
 .cd-box {
-  background: linear-gradient(180deg,#1a1a1d,#0f0f11);
-  padding: 30px;
-  width: 240px;
-  border-radius: 16px;
+  background: linear-gradient(180deg,#1b1b1e,#0f0f11);
+  padding: 30px 40px;
+  border-radius: 18px;
   text-align: center;
   border: 1px solid rgba(246,201,75,0.3);
   box-shadow: 0 0 45px rgba(246,201,75,0.25);
-  animation: popIn 0.4s ease-out;
+  animation: cdPop 0.35s ease-out;
+}
+
+@keyframes cdPop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 #cd-number {
-  font-size: 68px;
+  font-size: 72px;
   font-weight: 800;
   color: #ffd86b;
-  text-shadow: 0 0 18px rgba(246,201,75,0.8);
-  animation: glow 1s infinite alternate ease-in-out;
+  text-shadow: 0 0 20px rgba(246,201,75,0.8);
 }
 
 .cd-text {
   margin-top: 8px;
-  font-size: 16px;
+  font-size: 17px;
   color: #ddd;
 }
+
 
 @keyframes glow {
   0% { text-shadow: 0 0 8px rgba(246,201,75,0.4); }
@@ -372,22 +376,110 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
   <nav style="margin-top:12px">
     <button class="btn" onclick="show('farm')">Farm</button>
     <button class="btn" onclick="show('fruit')">Fruzo</button>
-    <button class="btn" onclick="show('deposit')">Deposit</button>
-    <button class="btn" onclick="show('withdraw')">Withdraw</button>
+    <button class="btn" onclick="show('wallet')">Wallet</button>
     <button class="btn" onclick="show('profile')">Profile</button>
     <button class="btn gold" onclick="show('history')">History</button>
   </nav>
-<!-- 🔔 Notice Card -->
-<div id="noticeCard" class="card full" style="display:none; margin-top:12px;">
-  <h3 style="margin:0;color:var(--gold)">📢 Latest Update</h3>
-  <div id="noticeText" class="small" style="margin-top:6px"></div>
-  <div id="noticeTime" class="small" style="opacity:0.7;margin-top:4px"></div>
+<div id="noticePopup" style="
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(6px);
+  z-index:99999;
+  opacity:0;
+  transition:opacity 0.5s ease;
+">
 
-  <button class="btn" onclick="dismissNotice()" 
-          style="margin-top:10px;background:#222;color:#fff;border-radius:8px;">
-    Hide
-  </button>
+  <div id="popupBox" style="
+    background:rgba(20,20,26,0.85);
+    padding:26px;
+    width:300px;
+    border-radius:16px;
+    border:2px solid rgba(246,201,75,0.4);
+    box-shadow:0 0 25px rgba(246,201,75,0.25);
+    text-align:center;
+    opacity:0;
+    transform:scale(0.6) translateY(30px);
+    transition:all 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    position:relative;
+  ">
+
+      <!-- Glowing animated border -->
+      <div class="glowRing"></div>
+
+      <!-- Countdown ring -->
+      <div class="ringContainer">
+          <svg class="ringSvg">
+              <circle class="ringBg" cx="40" cy="40" r="36"></circle>
+              <circle class="ringProg" cx="40" cy="40" r="36"></circle>
+          </svg>
+          <div class="ringText" id="popupTimer">3</div>
+      </div>
+
+      <div id="npText" style="font-size:17px;color:#fff;margin-top:14px;"></div>
+      <div id="npTime" style="font-size:13px;color:#c9c9c9;margin-top:6px;"></div>
+
+  </div>
 </div>
+
+<style>
+/* Animated golden border glow */
+.glowRing {
+  position:absolute;
+  inset:-2px;
+  border-radius:16px;
+  border:2px solid transparent;
+  animation:glow 2s infinite linear;
+}
+@keyframes glow {
+  0% { box-shadow:0 0 10px rgba(246,201,75,0.4); }
+  50% { box-shadow:0 0 22px rgba(246,201,75,0.7); }
+  100% { box-shadow:0 0 10px rgba(246,201,75,0.4); }
+}
+
+/* Countdown Circle */
+.ringContainer {
+  width:80px;
+  height:80px;
+  margin:0 auto;
+  position:relative;
+}
+.ringSvg {
+  width:80px;
+  height:80px;
+}
+.ringBg {
+  fill:none;
+  stroke:#333;
+  stroke-width:6;
+}
+.ringProg {
+  fill:none;
+  stroke:#f6c94b;
+  stroke-width:6;
+  stroke-linecap:round;
+  stroke-dasharray:226;
+  stroke-dashoffset:0;
+  transition:stroke-dashoffset 1s linear;
+}
+.ringText {
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:700;
+  color:#ffd86b;
+  text-shadow:0 0 8px rgba(246,201,75,0.8);
+}
+</style>
+
+
+
 
   <div id="farm" class="grid">
     <div class="card">
@@ -565,100 +657,152 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
   <button class="btn gold" onclick="createWithdraw()" style="margin-top:12px">Request Withdraw</button>
  </div>
 
-  <!-- profile -->
-  <div id="profile" class="card full" style="display:none;margin-top:18px">
-    <h3 style="color:var(--gold)">👤 Profile</h3>
+ <!-- profile -->
+<div id="profile" class="card full" style="display:none;margin-top:18px">
+  <h3 style="color:var(--gold)">👤 Profile</h3>
 
-    <div style="display:flex;align-items:center;gap:15px;margin-top:10px">
-      <div style="
-        width:60px;height:60px;border-radius:50%;
-        background:linear-gradient(135deg,#7ef2b3,#42d3a2);
-        display:flex;align-items:center;justify-content:center;
-        font-size:24px;font-weight:700;color:#022;
-      ">
-        <span id="avatarLetter">F</span>
-      </div>
-
-      <div style="line-height:1.4">
-        <div style="font-size:18px;font-weight:700" id="profileSavedName">—</div>
-        <div class="small">UID: <b id="profileUID">—</b></div>
-        <div class="small">Joined: <b id="joinedDate">—</b></div>
-      </div>
+  <div style="display:flex;align-items:center;gap:15px;margin-top:10px">
+    <div style="
+      width:60px;height:60px;border-radius:50%;
+      background:linear-gradient(135deg,#7ef2b3,#42d3a2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:24px;font-weight:700;color:#022;
+    ">
+      <span id="avatarLetter">F</span>
     </div>
+
+    <div style="line-height:1.4">
+      <div style="font-size:18px;font-weight:700" id="profileSavedName">—</div>
+      <div class="small">UID: <b id="profileUID">—</b></div>
+      <div class="small">Joined: <b id="joinedDate">—</b></div>
+    </div>
+  </div>
 
   <!-- PROFILE BOX -->
-<div class="profileBox">
+  <div class="profileBox">
 
-  <h3 class="heading">👤 Profile & Bank Details</h3>
+    <h3 class="heading">👤 Profile & Bank Details</h3>
 
-  <!-- NAME -->
-  <label class="label">Full Name</label>
-  <input id="profileName" class="in" placeholder="Your Name">
+    <!-- NAME -->
+    <label class="label">Full Name</label>
+    <input id="profileName" class="in" placeholder="Your Name">
 
-  <div class="line"></div>
+    <div class="line"></div>
 
-  <!-- BANK HOLDER -->
-  <label class="label">Account Holder Name</label>
-  <input id="bankHolder" class="in" placeholder="Enter Account Holder Name">
+    <!-- BANK HOLDER -->
+    <label class="label">Account Holder Name</label>
+    <input id="bankHolder" class="in" placeholder="Enter Account Holder Name">
 
-  <!-- BANK NAME -->
-  <label class="label">Bank Name</label>
-  <input id="bankName" class="in" placeholder="Enter Bank Name">
+    <!-- BANK NAME -->
+    <label class="label">Bank Name</label>
+    <input id="bankName" class="in" placeholder="Enter Bank Name">
 
-  <!-- ACCOUNT NUMBER -->
-  <label class="label">Account Number</label>
-  <input id="bankNumber" class="in" placeholder="Enter Account Number">
+    <!-- ACCOUNT NUMBER -->
+    <label class="label">Account Number</label>
+    <input id="bankNumber" class="in" placeholder="Enter Account Number">
 
-  <!-- IFSC -->
-  <label class="label">IFSC Code</label>
-  <input id="bankIfsc" class="in" placeholder="Enter IFSC Code">
+    <!-- IFSC -->
+    <label class="label">IFSC Code</label>
+    <input id="bankIfsc" class="in" placeholder="Enter IFSC Code">
 
-  <!-- PHONE -->
-  <label class="label">Phone Number</label>
-  <input id="bankPhone" class="in" placeholder="Enter Phone Number">
+    <!-- PHONE -->
+    <label class="label">Phone Number</label>
+    <input id="bankPhone" class="in" placeholder="Enter Phone Number">
 
-  <button class="btn gold" onclick="saveProfile()" style="margin-top:10px">Save Details</button>
-
-</div>
-
-    <h4 style="color:var(--gold);margin-top:15px">🔥 Daily Streak</h4>
-    <div class="small">
-      Streak: <b id="streakCount">0</b> / 7
-    </div>
-    <div class="progress" style="margin-top:6px;height:14px;">
-      <i id="streakBar" class="streak" style="width:0%"></i>
-    </div>
-
-    <button class="btn primary" onclick="claimDaily()" style="margin-top:12px;width:100%">
-      Claim Daily Reward
+    <button class="btn gold" onclick="saveProfile()" style="margin-top:10px">
+      Save Details
     </button>
 
-    <h4 style="color:var(--gold);margin-top:15px">🎒 Inventory</h4>
-    <div id="inventory" class="row"></div>
+  </div>
 
-    <h4 style="color:var(--gold);margin-top:15px">🏅 Level & Progress</h4>
-    <div class="small">Level: <b id="playerLevel">0</b></div>
-    <div class="progress"><i id="levelBar" style="width:0%"></i></div>
+  <h4 style="color:var(--gold);margin-top:15px">🔥 Daily Streak</h4>
+  <div class="small">
+    Streak: <b id="streakCount">0</b> / 7
+  </div>
+  <div class="progress" style="margin-top:6px;height:14px;">
+    <i id="streakBar" class="streak" style="width:0%"></i>
+  </div>
 
-    <h4 style="color:var(--gold);margin-top:15px">🔗 Share & Earn</h4>
-<div class="small">Share your link — get <b>5 coins</b> per share.</div>
+  <button class="btn primary" onclick="claimDaily()" style="margin-top:12px;width:100%">
+    Claim Daily Reward
+  </button>
 
-<button class="btn primary" onclick="shareApp()" style="margin-top:10px;width:100%">
-  Share & Earn Coins
-</button>
+  <h4 style="color:var(--gold);margin-top:15px">🎒 Inventory</h4>
+  <div id="inventory" class="row"></div>
 
+  <h3 style="color:var(--gold)">🚀 Referral Promotion</h3>
 
-<div class="small" style="margin-top:6px">
-  Total Shares: <b id="shareCount">0</b><br>
-  Level: <b id="shareLevel">0</b>
-</div>
+  <div class="small">Your Level: <b id="shareLevel">0</b></div>
+  <div class="progress" style="margin-top:6px;height:12px;">
+    <i id="shareBar" style="width:0%;background:linear-gradient(90deg,#f6c94b,#ffd86b)"></i>
+  </div>
 
-<div class="progress" style="margin-top:6px;height:12px;">
-  <i id="shareBar" style="width:0%;background:linear-gradient(90deg,#f6c94b,#ffd86b)"></i>
-</div>
-<button class="btn" onclick="logoutUser()" style="margin-top:10px;width:100%;background:#ff4c4c;color:#fff">
-  🚪 Logout
-</button>
+  <div class="small" id="nextBonusInfo" style="margin-top:6px;">Referral Bonus: 0%</div>
+
+  <div class="small" style="margin-top:10px">Total Invites: <b id="refInvites">0</b></div>
+  <div class="small">Deposited Users: <b id="refDeposUsers">0</b></div>
+  <div class="small">Bonus Earned: <b id="refBonus">₹0</b></div>
+
+  <button class="btn primary" onclick="shareApp()" style="margin-top:10px;width:100%">
+    🔗 Share & Earn
+  </button>
+
+  <!-- ✅ FINAL: Logout button INSIDE the profile -->
+  <button class="btn" onclick="logoutUser()" 
+          style="margin-top:20px;width:100%;background:#ff4c4c;color:#fff">
+    🚪 Logout
+  </button>
+
+</div> <!-- END PROFILE -->
+
+<!-- WALLET PAGE -->
+<div id="wallet" class="card full" style="display:none;margin-top:18px">
+
+  <h3 style="color:var(--gold)">💰 Wallet</h3>
+
+  <!-- TOP SECTION BALANCE -->
+  <div style="
+      background:#1a1a1d;
+      padding:16px;
+      border-radius:12px;
+      text-align:center;
+      margin-bottom:18px;
+      border:1px solid rgba(255,255,255,0.05);
+    ">
+    <div style="color:#aaa;font-size:14px;">Available Balance</div>
+    <div style="font-size:26px;font-weight:800;color:#7ef2b3" id="walletBalance">₹0</div>
+
+    <div style="color:#aaa;font-size:14px;margin-top:10px;">Bonus</div>
+    <div style="font-size:20px;font-weight:700;color:#f6c94b" id="walletBonus">₹0</div>
+  </div>
+
+  <!-- ADD MONEY -->
+  <button class="btn primary" onclick="openDeposit()" style="width:100%;padding:12px">
+    ➕ Add Money
+  </button>
+
+  <!-- WITHDRAW -->
+  <button class="btn gold" onclick="openWithdraw()" style="width:100%;padding:12px;margin-top:10px">
+    💸 Withdraw Money
+  </button>
+
+  <!-- REDEEM CODE -->
+  <button class="btn" onclick="openRedeemCode()" style="
+      width:100%;padding:12px;margin-top:10px;
+      background:#222;border:1px solid #333;color:#fff;
+    ">
+    🎁 Redeem Code
+  </button>
+
+  <!-- BOTTOM WALLET BOX -->
+  <div style="
+      background:#111;
+      margin-top:18px;
+      padding:14px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.05);
+    ">
+  </div>
 
 </div>
 
@@ -704,11 +848,9 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 <div id="msgContainer"></div>
 
 <script>
-  window.onload = () => {
-    renderHeader();
-    loadPublicFruitHistory();
-    loadFruitBetHistory();
-};
+
+
+
 
 /* =====================================================
    CONFIG
@@ -722,7 +864,14 @@ const firebaseConfig = {
   appId: "1:787325025832:web:d30236c045fc5f3d7abf1d",
   measurementId: "G-LZYGJEYDQX"
 };
+/* =====================================================
+   FORCE START FIREBASE (AFTER CONFIG)
+===================================================== */
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
+let firebaseEnabled = true;
+console.log("🔥 Firebase Connected (Forced Init)");
 // SAVE REFERRAL CODE FROM URL
 (function detectReferral() {
   const url = new URLSearchParams(window.location.search);
@@ -738,35 +887,12 @@ const UPI_ID = "Q424657914@ybl";
 const TEST_MODE = false;
 const FARM_TIME_MS = TEST_MODE ? 5000 : 5 * 60 * 1000;
 
-/* =====================================================
-   FIREBASE INIT
-===================================================== */
-let firebaseEnabled = false;
-let db = null;
-
-function initFirebaseIfAvailable() {
-  try {
-    if (typeof firebase !== "undefined" && typeof firebase.initializeApp === "function") {
-      if (!firebase.apps || firebase.apps.length === 0) {
-        firebase.initializeApp(firebaseConfig);
-      }
-      if (firebase.firestore) {
-        db = firebase.firestore();
-        firebaseEnabled = true;
-        console.log("🔥 Firebase Connected");
-      }
-    }
-  } catch (e) {
-    console.warn("Firebase init error:", e);
-  }
+function writeDoc(col, id, data) {
+  if (!firebaseEnabled || !db) return Promise.resolve();
+  return db.collection(col).doc(String(id)).set(data)
+    .catch(e => console.warn("Firestore write failed:", e));
 }
 
-(function retryFirebase(attempt = 0) {
-  initFirebaseIfAvailable();
-  if (!firebaseEnabled && attempt < 8) {
-    setTimeout(() => retryFirebase(attempt + 1), 400);
-  }
-})(0);
 
 function writeDoc(col, id, data) {
   if (!firebaseEnabled || !db) return Promise.resolve();
@@ -877,43 +1003,46 @@ const CROP = {
   carrot: { name: "Carrot", lotSize: 15, costPerLot: 150, chance: 4, returnPerItem: 18 },
   potato: { name: "Potato", lotSize: 25, costPerLot: 250, chance: 2, returnPerItem: 25 }
 };
-
 function loadPublicFruitHistory() {
     if (!firebaseEnabled || !db) return;
 
     db.collection("fruitPublicHistory")
-        .orderBy("time", "desc")
-        .limit(20)
-        .onSnapshot(snap => {
+      .orderBy("time", "desc")
+      .limit(30)
+      .onSnapshot((snap) => {
 
-            const tb = document.querySelector("#fruitHistory tbody");
-            tb.innerHTML = "";
+        const tb = document.querySelector("#fruitHistory tbody");
+        tb.innerHTML = "";
 
-            if (snap.empty) {
-                tb.innerHTML =
-                    "<tr><td colspan='3' style='text-align:center;opacity:0.5;'>No records</td></tr>";
-                return;
-            }
+        if (snap.empty) {
+            tb.innerHTML =
+              "<tr><td colspan='3' style='text-align:center;opacity:0.5;'>No records</td></tr>";
+            return;
+        }
 
-            snap.forEach(doc => {
-                const h = doc.data();
+        snap.forEach(doc => {
+            let h = doc.data();
 
-                tb.innerHTML += `
-                    <tr>
-                        <td>${h.period ? h.period : "—"}</td>
-                        <td>${
-                            h.fruit === "apple" ? "🍎" :
-                            h.fruit === "avocado" ? "🥑" :
-                            h.fruit === "banana" ? "🍌" :
-                            h.fruit === "grapes" ? "🍇" :
-                            h.fruit === "orange" ? "🍊" : "🥭"
-                        }</td>
-                        <td>${new Date(h.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
-                    </tr>
-                `;
-            });
+            tb.innerHTML += `
+            <tr>
+                <td>${h.period}</td>
+                <td>${
+                    h.fruit === "apple" ? "🍎" :
+                    h.fruit === "avocado" ? "🥑" :
+                    h.fruit === "banana" ? "🍌" :
+                    h.fruit === "grapes" ? "🍇" :
+                    h.fruit === "orange" ? "🍊" :
+                    "🥭"
+                }</td>
+                <td>${
+                    new Date(h.time)
+                      .toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" })
+                }</td>
+            </tr>`;
         });
+    });
 }
+
 
 /* =====================================================
    HEADER RENDER
@@ -941,6 +1070,9 @@ if (me.bank) {
   document.getElementById("wbNumber").innerText = me.bank.number;
   document.getElementById("wbIFSC").innerText = me.bank.ifsc;
   document.getElementById("wbPhone").innerText = me.bank.phone;
+  document.getElementById("walletBalance").innerText = formatAmt(me.balance);
+  document.getElementById("walletBonus").innerText = formatAmt(me.bonus || 0);
+
 }
 
 const streak = me.daily?.streak || 0;
@@ -978,20 +1110,32 @@ function renderInventory() {
    PAGE SWITCH
 ===================================================== */
 function show(page) {
-    ["farm", "fruit", "deposit", "withdraw", "profile", "history"]
+    ["farm", "fruit", "deposit", "withdraw", "wallet", "profile", "history"]
         .forEach(id => {
             let el = document.getElementById(id);
             if (!el) return;
-            el.style.display = (id === page ? (id === "farm" ? "grid" : "block") : "none");
+            el.style.display = (id === page ? 
+                (id === "farm" ? "grid" : "block") : "none");
         });
 
     if (page === "history") {
         renderTables();
-        loadFruitBetHistory();   // ⭐ FINAL FIX
+        loadFruitBetHistory();
     }
 
     if (page === "profile") renderProfile();
+    if (page === "wallet") renderWallet();   // ⭐ ADD THIS
 }
+function renderWallet() {
+    let me = ensureUser();
+
+    document.getElementById("walletBalance").innerText =
+        "₹" + Number(me.balance || 0).toLocaleString("en-IN");
+
+    document.getElementById("walletBonus").innerText =
+        "₹" + Number(me.bonus || 0).toLocaleString("en-IN");
+}
+
 
 
 
@@ -1276,13 +1420,200 @@ function settleFarm(id) {
   );
 }
 
+function animateShowPopup() {
+    const pop = document.getElementById("noticePopup");
+    const box = document.getElementById("popupBox");
+
+    pop.style.display = "flex";
+
+    setTimeout(() => {
+        pop.style.opacity = "1";
+        box.style.opacity = "1";
+        box.style.transform = "scale(1)";
+    }, 20);
+}
+/* =====================================================
+   FRUIT TRADING GAME (FINAL FIREBASE VERSION)
+=====================================================*/
+function animateHidePopup(callback) {
+    const pop = document.getElementById("noticePopup");
+    const box = document.getElementById("popupBox");
+
+    pop.style.opacity = "0";
+    box.style.opacity = "0";
+    box.style.transform = "scale(0.7)";
+
+    setTimeout(() => {
+        pop.style.display = "none";
+        if (callback) callback();
+    }, 500);
+}
+let popupCountdown = 3;
+
+function animateShowPopup() {
+    const pop = document.getElementById("noticePopup");
+    const box = document.getElementById("popupBox");
+
+    pop.style.display = "flex";
+
+    setTimeout(() => {
+        pop.style.opacity = "1";
+        box.style.opacity = "1";
+        box.style.transform = "scale(1) translateY(0)";
+    }, 20);
+
+    startCountdownRing();
+}
+
+// countdown ring logic
+function startCountdownRing() {
+    popupCountdown = 3;
+    const timerText = document.getElementById("popupTimer");
+    const ring = document.querySelector(".ringProg");
+
+    timerText.innerText = popupCountdown;
+
+    const intv = setInterval(() => {
+        popupCountdown--;
+        timerText.innerText = popupCountdown;
+
+        // animate ring
+        ring.style.strokeDashoffset = (226 * (3 - popupCountdown)) / 3;
+
+        if (popupCountdown <= 0) {
+            clearInterval(intv);
+            animateHidePopup(openGameDefault);
+        }
+    }, 1000);
+}
+
+
 
 /* =====================================================
    FRUIT TRADING GAME (FINAL FIREBASE VERSION)
 =====================================================*/
+async function handleNoticePopup() {
+  if (!firebaseEnabled || !db) {
+    openGameDefault();
+    return;
+  }
+
+  const snap = await db.collection("notices").doc("global").get();
+  if (!snap.exists) {
+    openGameDefault();
+    return;
+  }
+
+  const data = snap.data();
+
+  document.getElementById("npText").innerText = data.text;
+  document.getElementById("npTime").innerText =
+    "Updated: " + new Date(data.ts).toLocaleTimeString([], {
+      hour:"2-digit",
+      minute:"2-digit"
+    });
+
+  animateShowPopup(); // 🎉 PRO animation
+}
+
+function openGameDefault() {
+  show("fruit");
+}
+
+
+
+
+
+
+
+
 /* =====================================================
    FRUIT TRADING — FINAL ADMIN VERSION (Firebase)
 =====================================================*/
+function loadReferralStats() {
+    let me = ensureUser();
+    let stats = me.referralStats || { invites: 0, depositUsers: 0, bonusEarned: 0 };
+
+    const level = getReferralLevel(stats.invites);
+    const percent = getBonusPercent(level);
+
+    document.getElementById("refInvites").innerText = stats.invites;
+    document.getElementById("refDeposUsers").innerText = stats.depositUsers;
+    document.getElementById("refBonus").innerText = "₹" + stats.bonusEarned;
+    document.getElementById("shareLevel").innerText = "Level " + level;
+
+    // Progress bar (0–10 level)
+    document.getElementById("shareBar").style.width = (level * 10) + "%";
+
+    document.getElementById("nextBonusInfo").innerText =
+        `Referral Bonus: ${percent}%`;
+}
+
+async function increaseInviteCount(refID) {
+    let u = getStore("users", {});
+    if (!u[refID]) return;
+
+    if (!u[refID].referralStats)
+        u[refID].referralStats = { invites: 0, depositUsers: 0, bonusEarned: 0 };
+
+    u[refID].referralStats.invites += 1;
+
+    setStore("users", u);
+    await writeDoc("users", refID, u[refID]);
+}
+function getReferralLevel(invites) {
+    return Math.min(10, Math.floor(invites / 3)); 
+}
+function getBonusPercent(level) {
+    return level * 3;   // Level 1 = 3%, Level 10 = 30%
+}
+async function giveReferralBonus(deposit) {
+    let users = getStore("users", {});
+    const user = users[deposit.owner];
+    if (!user || !user.referredBy) return;
+
+    const refID = user.referredBy;
+    const refUser = users[refID];
+    if (!refUser) return;
+
+    // Already given?
+    if (deposit.referralPaid) return;
+
+    // Ensure referral stats exist
+    if (!refUser.referralStats)
+        refUser.referralStats = { invites: 0, depositUsers: 0, bonusEarned: 0 };
+
+    // Level based on invites
+    const level = getReferralLevel(refUser.referralStats.invites);
+
+    // Bonus %
+    const percent = getBonusPercent(level); // e.g. Level 5 = 15%
+
+    // Calculate bonus amount
+    const bonus = Math.floor((deposit.amount * percent) / 100);
+
+    // Add bonus to referrer wallet
+    refUser.balance += bonus;
+    refUser.referralStats.depositUsers += 1;
+    refUser.referralStats.bonusEarned += bonus;
+
+    // Mark deposit as paid
+    deposit.referralPaid = true;
+
+    // Save both in Firebase
+    if (firebaseEnabled && db) {
+        await writeDoc("users", refID, refUser);
+        await writeDoc("deposits", deposit.id, deposit);
+    }
+
+    // Save locally
+    setStore("users", users);
+
+    console.log(`💰 Referral Bonus Given: Level ${level} → ${percent}% → ₹${bonus}`);
+}
+
+
+
 /* =====================================================
    FRUIT TRADING GAME – FINAL FIXED VERSION
 ===================================================== */
@@ -1317,54 +1648,54 @@ function startFruitTimer() {
     fruitTimerInterval = setInterval(() => {
 
         fruitTimeLeft--;
+        updateFruitTimer();
 
-        // When timer ends
         if (fruitTimeLeft <= 0) {
-    clearInterval(fruitTimerInterval);
-
-    // Show premium popup
-    const popup = document.getElementById("countdownPopup");
-    const numberBox = document.getElementById("cd-number");
-
-    popup.style.display = "flex";
-
-    let wait = 10;
-    numberBox.innerText = wait;
-
-    let cd = setInterval(() => {
-        wait--;
-        numberBox.innerText = wait;
-
-        if (wait <= 0) {
-            clearInterval(cd);
-            
-            // Generate result
-            generateFruitResult(fruitCurrentPeriod).then(winFruit => {
-
-                document.getElementById("fruitResult").innerHTML =
-                    `<b>Result:</b> ${winFruit.toUpperCase()}`;
-
-                // Hide popup after result
-                setTimeout(() => {
-                    popup.style.display = "none";
-                    document.getElementById("fruitResult").innerHTML = "";
-
-                    // Start new period
-                    createNewFruitPeriod();
-                }, 1500);
-            });
+            clearInterval(fruitTimerInterval);
+            showResultCountdown();
         }
 
     }, 1000);
-
-    return;
 }
+function showResultCountdown() {
+    const box = document.getElementById("countdownPopup");
+    const num = document.getElementById("cd-number");
 
+    box.style.display = "flex";
 
-        // Normal countdown update
-        updateFruitTimer();
+    let cd = 10;
+    num.innerText = cd;
+
+    const t = setInterval(() => {
+        cd--;
+        num.innerText = cd;
+
+        if (cd <= 0) {
+            clearInterval(t);
+
+            generateFruitResult(fruitCurrentPeriod).then(async (f) => {
+
+            document.getElementById("fruitResult").innerHTML =
+            "<b>Result:</b> " + f.toUpperCase();
+
+           setTimeout(async () => {
+            box.style.display = "none";
+            console.log("⭐ Creating NEW period after result");
+            await createNewFruitPeriod();
+            }, 1500);
+
+          });
+
+        }
+
     }, 1000);
 }
+
+function writeUser(uid, data) {
+    if (!firebaseEnabled || !db) return;
+    return db.collection("users").doc(uid).set(data);
+}
+
 
 
     
@@ -1373,42 +1704,32 @@ function startFruitTimer() {
 /* =====================================================
     CREATE NEW PERIOD (AUTO)
 ===================================================== */
-function createNewFruitPeriod() {
-
-    let last = parseInt(getStore("fruitLast", 0)) || 0;
-    last = last + 1;
-
+async function createNewFruitPeriod() {
+    const last = Number(getStore("fruitLast", 0)) + 1;
     setStore("fruitLast", last);
-    setStore("lastFruitPeriod", "F2E-BAL08-" + String(last).padStart(5, "0"));
 
-
-    const newPeriod = "F2E-BAL08-" + String(last).padStart(5, "0");
-    fruitCurrentPeriod = newPeriod;
-
-    setStore("lastFruitPeriod", newPeriod);
-    document.getElementById("fruitPeriod").innerText = newPeriod;
-
-
-    fruitCurrentPeriod = newPeriod;
-    document.getElementById("fruitPeriod").innerText = newPeriod;
-
+    const period = "F2E-BAL08-" + String(last).padStart(5, "0");
     const start = Date.now();
-    const end = start + 120000; // 2 min
+    const end = start + (2 * 60 * 1000);
 
-    // SAVE TO FIREBASE
-    if (firebaseEnabled && db) {
-        db.collection("fruitPeriods").doc(newPeriod).set({
-            period: newPeriod,
-            startTime: start,
-            endTime: end
-        });
-    }
-
-
+    fruitCurrentPeriod = period;
     fruitTimeLeft = 120;
-    startFruitTimer();
 
+    document.getElementById("fruitPeriod").innerText = period;
+    document.getElementById("fruitResult").innerHTML = "";
+
+    await fbWrite("fruitPeriods", period, {
+        period,
+        startTime: start,
+        endTime: end,
+        server: true
+    });
+
+    startFruitTimer();
 }
+
+
+
 
 
 /* =====================================================
@@ -1470,6 +1791,54 @@ function getActiveFruitPeriod() {
 /* =====================================================
    GENERATE RANDOM FRUIT RESULT FOR EACH PERIOD
 ===================================================== */
+function openDeposit() {
+    show("deposit");
+}
+function openWithdraw() {
+    show("withdraw");
+}
+function openRedeemCode() {
+    openPopup(
+        "🎁 Redeem Code",
+        `<input id='redeemInput' class='in' placeholder='Enter redeem code'>`,
+        `<button class='btn gold' onclick='applyRedeem()'>Apply</button>`
+    );
+}
+async function applyRedeem() {
+    let code = document.getElementById("redeemInput").value.trim().toUpperCase();
+    if (!code) return showMessage("Enter a valid redeem code!", "error");
+
+    const doc = await db.collection("redeemCodes").doc(code).get();
+
+    if (!doc.exists) return showMessage("Invalid code!", "error");
+
+    let data = doc.data();
+
+    if (!data.active) return showMessage("This code is disabled!", "error");
+    if (data.uses <= 0) return showMessage("Code expired!", "error");
+
+    // User Data
+    let me = ensureUser();
+
+    // Add credit
+    me.balance += data.amount;
+    me.bonus = (me.bonus || 0) + data.amount;
+
+    await db.collection("users").doc(currentUser).update(me);
+
+    // Reduce usage
+    await db.collection("redeemCodes").doc(code).update({
+        uses: data.uses - 1
+    });
+
+    closePopup();
+    renderHeader();
+    renderWallet();
+
+    showMessage("Success! You received ₹" + data.amount, "success");
+}
+
+
 /* =====================================================
    GENERATE REAL RANDOM RESULT FOR THIS PERIOD
 ===================================================== */
@@ -1477,72 +1846,49 @@ function getActiveFruitPeriod() {
    GENERATE REAL RANDOM RESULT
 ===================================================== */
 async function generateFruitResult(period) {
-    console.log("🎯 Generating result for:", period);
-
-    // 1) Check forced winner
     let forced = null;
+
     if (firebaseEnabled && db) {
-        let doc = await db.collection("forceFruitResult").doc(period).get();
+        const doc = await db.collection("forceFruitResult").doc(period).get();
         if (doc.exists && doc.data().locked) {
             forced = doc.data().fruit;
         }
     }
 
-    // 2) Random pick if no forced
-    let fruits = ["apple", "banana", "mango", "grapes", "avocado", "orange"];
-    let winFruit = forced || fruits[Math.floor(Math.random() * fruits.length)];
-    console.log("🏆 Winner =", winFruit);
+    const fruits = ["apple","banana","mango","grapes","avocado","orange"];
+    const winFruit = forced || fruits[Math.floor(Math.random()*fruits.length)];
 
-    // 3) Save in Public History
     if (firebaseEnabled && db) {
         db.collection("fruitPublicHistory").doc(period).set({
-            period: period,
+            period,
             fruit: winFruit,
             time: Date.now()
         });
     }
 
-    // 4) Fetch winners bets
-    const winners = await db.collection("fruitBets")
+    const bets = await db.collection("fruitBets")
         .where("period", "==", period)
         .where("fruit", "==", winFruit)
         .get();
 
-    if (winners.empty) {
-        console.log("❌ No winners in this round");
-        return winFruit;
-    }
+    const usersLocal = getStore("users", {});
 
-    // Multiplier
-    let mult = getStore("fruitMultiplier", 2);
+    bets.forEach(async (b) => {
+        const data = b.data();
+        const win = (data.qty * data.baseAmount) * 2;
 
-    // 5) PROCESS WINNERS
-    let users = getStore("users", {});
-    winners.forEach(async (doc) => {
-        const b = doc.data();
-        let uid = b.uid;
+        usersLocal[data.uid].balance += win;
 
-        if (!users[uid]) return;
-
-        let winAmount = (b.total || (b.qty * b.amount)) * mult;
-
-        users[uid].balance = Number(users[uid].balance || 0) + winAmount;
-
-        console.log(`💰 Added ₹${winAmount} to ${uid}`);
-
-        // Save local
-        setStore("users", users);
-
-        // Save Firebase
         if (firebaseEnabled && db) {
-            await writeUser(uid, users[uid]);
+            await writeUser(data.uid, usersLocal[data.uid]);
         }
-    });
 
-    console.log("🎉 All winnings added successfully!");
+        setStore("users", usersLocal);
+    });
 
     return winFruit;
 }
+
 
 
 async function confirmFruitBet() {
@@ -2103,13 +2449,16 @@ function shareApp() {
 /* =====================================================
    FULL REFRESH
 ===================================================== */
-function fullRefresh() {
+async function fullRefresh() {
+  await initialFirestoreSync();   // 🔥 server → local sync
+
   renderHeader();
   renderProfile();
   renderInventory();
   renderTables();
   showMessage("Refreshed!", "info");
 }
+
 
 /* =====================================================
    FIRESTORE -> Local startup sync (best-effort)
@@ -2155,31 +2504,168 @@ async function initialFirestoreSync() {
     console.warn("initialFirestoreSync failed", e);
   }
 }
+function startUserRealtime() {
+    if (!currentUser) return;
+
+    db.collection("users").doc(currentUser)
+      .onSnapshot((doc) => {
+          if (!doc.exists) return;
+
+          const data = doc.data();
+
+          // Local overwrite
+          let u = getStore("users", {});
+          u[currentUser] = data;
+          setStore("users", u);
+
+          renderHeader();
+      });
+}
+
+function startFruitPeriodRealtime() {
+    db.collection("fruitPeriods")
+      .orderBy("startTime", "desc")
+      .limit(1)
+      .onSnapshot(async (snap) => {
+
+          if (snap.empty) {
+              await createNewFruitPeriod();
+              return;
+          }
+
+          const d = snap.docs[0].data();
+
+          fruitCurrentPeriod = d.period;
+          document.getElementById("fruitPeriod").innerText = d.period;
+
+          const nowTime = Date.now();
+          fruitTimeLeft = Math.floor((d.endTime - nowTime) / 1000);
+
+          if (fruitTimerInterval) clearInterval(fruitTimerInterval);
+
+          if (fruitTimeLeft <= 0) return;
+
+          startFruitTimer();
+      });
+}
+function startFruitResultRealtime() {
+    db.collection("fruitPublicHistory")
+      .orderBy("time", "desc")
+      .limit(1)
+      .onSnapshot((snap) => {
+           if (snap.empty) return;
+
+           const d = snap.docs[0].data();
+
+           if (d.period === fruitCurrentPeriod) {
+               document.getElementById("fruitResult").innerHTML =
+                 "<b>Result:</b> " + d.fruit.toUpperCase();
+           }
+      });
+}
+function startDepositRealtime() {
+    db.collection("deposits")
+      .where("owner", "==", currentUser)
+      .onSnapshot((snap) => {
+         
+          let arr = [];
+          snap.forEach(d => arr.push(d.data()));
+
+          // Save to localStorage
+          setStore("deposits", arr);
+
+          // Update UI
+          renderTables();
+      });
+}
+function startWithdrawRealtime() {
+    db.collection("withdraws")
+      .where("owner", "==", currentUser)
+      .onSnapshot((snap) => {
+
+          let arr = [];
+          snap.forEach(d => arr.push(d.data()));
+
+          setStore("withdraws", arr);
+          renderTables();
+          
+          // Refund handler
+          arr.forEach(w => {
+              if (w.status === "rejected" && !w.refunded) {
+
+                  let usersLocal = getStore("users", {});
+                  let me = usersLocal[currentUser];
+
+                  me.balance += w.amount;    // Refund
+                  usersLocal[currentUser] = me;
+                  setStore("users", usersLocal);
+
+                  // Save back to firebase
+                  db.collection("users").doc(currentUser).update(me);
+                  db.collection("withdraws").doc(w.id).update({ refunded: true });
+
+                  renderHeader();
+                  showMessage("Withdraw Refund Added!", "success");
+              }
+          });
+
+      });
+}
+
 
 /* =====================================================
    INIT
 ===================================================== */
-db.collection("fruitPeriods")
-  .orderBy("startTime", "desc")
-  .limit(1)
-  .onSnapshot(snapshot => {
+async function loadLiveFruitPeriod() {
+    if (!firebaseEnabled || !db) {
+        console.log("⚠ Firebase OFF → Creating offline period");
+        await createNewFruitPeriod();
+        return;
+    }
 
-      if (snapshot.empty) return;
+    db.collection("fruitPeriods")
+      .orderBy("startTime", "desc")
+      .limit(1)
+      .onSnapshot(async (snap) => {
 
-      const data = snapshot.docs[0].data();
+          // ❌ No period in database → Always create new
+          if (snap.empty) {
+              console.log("❌ No period found — creating NEW");
+              await createNewFruitPeriod();
+              return;
+          }
 
-      fruitCurrentPeriod = data.period;
-      setStore("lastFruitPeriod", fruitCurrentPeriod);
+          const d = snap.docs[0].data();
 
-      document.getElementById("fruitPeriod").innerText = fruitCurrentPeriod;
+          fruitCurrentPeriod = d.period;
+          document.getElementById("fruitPeriod").innerText = d.period;
 
-      fruitTimeLeft = Math.floor((data.endTime - Date.now()) / 1000);
+          const nowTime = Date.now();
+          let end = Number(d.endTime);
 
-      if (fruitTimeLeft < 0) fruitTimeLeft = 0;
+          // ❌ Invalid timestamp → Create new
+          if (!end || isNaN(end)) {
+              console.log("⚠ Invalid endTime — NEW PERIOD");
+              await createNewFruitPeriod();
+              return;
+          }
 
-      startFruitTimer();
-  });
- // <-- closing this bracket is IMPORTANT
+          fruitTimeLeft = Math.floor((end - nowTime) / 1000);
+
+          if (fruitTimerInterval) clearInterval(fruitTimerInterval);
+
+          // ⏳ Time over → New period immediately
+          if (fruitTimeLeft <= 0) {
+              console.log("⏳ Period expired — NEW PERIOD");
+              await createNewFruitPeriod();
+              return;
+          }
+
+          startFruitTimer();
+      });
+}
+
+
   // AUTO LOAD PUBLIC & USER FRUIT HISTORY AFTER FIREBASE INIT
 setTimeout(() => {
     console.log("⏳ Loading Fruit History…");
@@ -2188,14 +2674,45 @@ setTimeout(() => {
 setTimeout(() => {
     loadFruitBetHistory();   // ⭐ load your bet history also
 }, 2000);
+/* =====================================================
+   WATCHDOG – GAME NEVER STOPS
+===================================================== */
+setInterval(() => {
+    if (fruitTimeLeft <= 0 && !fruitTimerInterval) {
+        console.log("⛑ Auto-recover → NEW PERIOD");
+        createNewFruitPeriod();
+    }
+}, 5000);
 
-// 🔥 FIX 2: Page load par header data update
-window.onload = () => {
+window.onload = async () => {
+
+    await initialFirestoreSync();
+
+    handleNoticePopup();
+    startUserRealtime();
+    startDepositRealtime();     // 🔥 NEW
+    startWithdrawRealtime();    // 🔥 NEW
+    startFruitResultRealtime();
+
     renderHeader();
     renderProfile();
     renderInventory();
     renderTables();
+
+    loadLiveFruitPeriod();
+    loadPublicFruitHistory();
+    loadFruitBetHistory();
+    loadNoticeFromFirestore();
 };
+
+
+function fbWrite(col, id, data) {
+    if (!firebaseEnabled || !db) return Promise.resolve();
+    return db.collection(col).doc(String(id)).set(data)
+      .catch(e => console.warn("Firestore write failed:", e));
+}
+
+
 
 
 </script>
@@ -2207,7 +2724,6 @@ window.onload = () => {
 
 </body>
 </html>
-
 
 
 

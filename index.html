@@ -2223,7 +2223,7 @@ function startDeposit() {
   const amt = parseInt(document.getElementById("depositAmt").value) || 0;
   const type = document.getElementById("depositType").value;
 
-  if (amt < 100) return showMessage("Min ₹100", "error");
+  if (amt < 50) return showMessage("Min ₹50", "error");
   if (amt > 20000) return showMessage("Max ₹20,000", "error");
 
   __lastDepositAmt = amt;
@@ -2931,6 +2931,7 @@ function fbWrite(col, id, data) {
 
 </body>
 </html>
+
 
 
 

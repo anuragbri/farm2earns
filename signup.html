@@ -136,6 +136,11 @@
   <input id="phone" placeholder="Phone number (10 digits)" maxlength="10" inputmode="numeric">
   <input id="password" type="password" placeholder="Create password">
   <input id="ref" placeholder="Referral code (optional)">
+  <div style="margin-top:14px; text-align:left; font-size:14px; color:#c3c6d1;">
+  <input type="checkbox" id="tc" style="width:16px;height:16px;"> 
+  I agree to the 
+  <span class="link" onclick="openTC()">Terms & Conditions</span>
+</div>
 
   <button class="btn" onclick="doSignup()">Sign Up & Start Farming</button>
 
@@ -186,6 +191,12 @@ function randomID(){
 function gotoLogin(){
   location.href = "login.html";
 }
+function openTC(){
+  document.getElementById("tcModal").style.display = "flex";
+}
+function closeTC(){
+  document.getElementById("tcModal").style.display = "none";
+}
 
 /*** MAIN SIGNUP FUNCTION ***/
 async function doSignup(){
@@ -196,7 +207,10 @@ async function doSignup(){
   const msg = document.getElementById("msg");
 
   msg.innerText = "";
-
+   if(!document.getElementById("tc").checked){
+  msg.innerText = "Please accept Terms & Conditions!";
+  return;
+  }
   if(!nameVal || !phoneVal || !passVal){
     msg.innerText = "Fill all fields!";
     return;
@@ -213,6 +227,7 @@ async function doSignup(){
     msg.innerText = "Phone already registered!";
     return;
   }
+
 
   const uid = randomID();
 
@@ -265,6 +280,28 @@ async function doSignup(){
   setTimeout(()=> location.href = "index.html", 1200);
 }
 </script>
+<div id="tcModal" class="modal">
+  <div class="card" style="max-height:80vh; overflow:auto;">
+    <div style="font-size:18px;font-weight:700;color:#f6c94b">Terms & Conditions</div>
+
+    <div style="text-align:left; margin-top:12px; font-size:14px; color:#c3c6d1; line-height:1.6;">
+  <b>1.</b> Users must provide accurate information while signing up.<br><br>
+
+  <b>2.</b> Any fraudulent or illegal activity may lead to permanent account suspension.<br><br>
+
+  <b>3.</b> Earnings depend on gameplay performance. This platform does not guarantee income or profit.<br><br>
+
+  <b>4.</b> Withdrawals require correct bank / UPI details. Incorrect details may delay or cancel payments.<br><br>
+
+  <b>5.</b> Uploading fake payment proofs, edited screenshots, or misuse of any system feature will result in permanent ban.<br><br>
+
+  <b>6.</b> All deposits are made at the user’s own risk. The platform is not responsible for losses caused by user mistakes or gameplay decisions.<br><br>
+</div>
+
+
+    <button class="btn" style="margin-top:18px;" onclick="closeTC()">Close</button>
+  </div>
+</div>
 
 </body>
 </html>

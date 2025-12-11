@@ -466,7 +466,55 @@ function openAddBalanceModal(uid=null){ const users=getStore('users',{}); const 
 function applyAdjustBalance(){ const uid=document.getElementById('adjUID').value.trim(); const amt=Number(document.getElementById('adjAmt').value||0); const reason=(document.getElementById('adjReason').value||'').trim(); if(!uid) return alert('Enter UID'); const users=getStore('users',{}); if(!users[uid]) return alert('User not found'); users[uid].balance = Number(users[uid].balance||0) + amt; setStore('users',users); if(firebaseEnabled && db) writeUser(uid,users[uid]); addLog('adjust-balance', `${uid} ${amt} (${reason})`); closeModal(); renderUsers(); recalcAllStats(); }
 
 /* DEPOSITS */
-function renderDeposits(){ const deps=getStore('deposits',[]); const tbody=document.querySelector('#deposTbl tbody'); tbody.innerHTML=''; deps.forEach(d=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${d.id}</td><td>${d.owner}</td><td>${formatINR(d.amount)}</td><td><span class="badge status ${d.status}">${d.status}</span></td>\n    <td>${d.status==='pending' ? `<button class="btn-small" onclick="approveDeposit('${d.id}')">Approve</button> <button class="btn-small" onclick="rejectDeposit('${d.id}')">Reject</button>`:'—'}</td>`; tbody.appendChild(tr); }); }
+function renderDeposits() {
+  const deps = getStore("deposits", []);
+  const tbody = document.querySelector("#deposTbl tbody");
+  tbody.innerHTML = "";
+
+  deps.forEach(d => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${d.id}</td>
+      <td>${d.owner}</td>
+      <td>${formatINR(d.amount)}</td>
+
+      <td>
+        ${d.screenshot 
+          ? `<img src="${d.screenshot}" 
+                   style="width:60px;border-radius:6px;cursor:pointer"
+                   onclick="viewImage('${d.screenshot}')">`
+          : "—"}
+      </td>
+
+      <td>
+        <span class="badge status ${d.status}">${d.status}</span>
+      </td>
+
+      <td>
+        ${
+          d.status === "pending"
+            ? `<button class="btn-small" onclick="approveDeposit('${d.id}')">Approve</button>
+               <button class="btn-small" onclick="rejectDeposit('${d.id}')">Reject</button>`
+            : "—"
+        }
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+function viewImage(src) {
+  showModal(`
+    <h3>Payment Screenshot</h3>
+    <img src="${src}" 
+         style="width:100%;border-radius:12px;margin-top:10px">
+    <div style="margin-top:12px;">
+      <button class="btn gold" onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+
 async function approveDeposit(id){ if(!confirm('Approve deposit '+id+'?')) return; const deps=getStore('deposits',[]); const idx=deps.findIndex(x=>x.id===id); if(idx===-1) return alert('Not found'); const d=deps[idx]; if(d.status!=='pending') return alert('Already processed'); const users=getStore('users',{}); if(!users[d.owner]) return alert('User not found'); users[d.owner].balance = Number(users[d.owner].balance||0)+Number(d.amount); d.status='approved'; setStore('deposits',deps); setStore('users',users); if(firebaseEnabled && db){ try{ await writeUser(d.owner,users[d.owner]); await writeDoc('deposits', id, d); }catch(e){ console.warn('approveDeposit firebase write failed', e); } } addLog('approve-deposit', `${id} ${d.owner}`); renderDeposits(); renderUsers(); recalcAllStats(); }
 async function rejectDeposit(id){ if(!confirm('Reject deposit '+id+'?')) return; const deps=getStore('deposits',[]); const idx=deps.findIndex(x=>x.id===id); if(idx===-1) return; deps[idx].status='rejected'; setStore('deposits',deps); if(firebaseEnabled && db) try{ await writeDoc('deposits', id, deps[idx]); }catch(e){ console.warn('rejectDeposit firebase write failed', e); } addLog('reject-deposit', id); renderDeposits(); recalcAllStats(); }
 /* ==========================

@@ -232,21 +232,27 @@ async function doSignup(){
   const uid = randomID();
 
   /** NEW USER OBJECT **/
-  const newUser = {
-    id: uid,
-    name: nameVal,
-    phone: phoneVal,
-    password: passVal,
-    balance: 100,
-    coins: 20,
-    joined: Date.now(),
-    upi: "",
-    bank: null,
-    daily: { lastClaim:"", streak:0 },
-    inventory: {},
-    stats: { farms:0, wins:0, profit:0 },
-    referrals: []
-  };
+ const newUser = {
+  id: uid,
+  name: nameVal,
+  phone: phoneVal,
+  password: passVal,
+
+  balance: 0,
+  bonus: 1000,              // ✅ ₹10 Welcome Bonus
+  signupBonusGiven: true,   // 🔒 one-time only
+  coinsConverted: true,
+
+  joined: Date.now(),
+  upi: "",
+  bank: null,
+  daily: { lastClaim:"", streak:0 },
+  inventory: {},
+  stats: { farms:0, wins:0, profit:0 },
+  referrals: []
+};
+
+
 
   // LOCAL SAVE
   users[uid] = newUser;
@@ -258,14 +264,15 @@ async function doSignup(){
 
   // REFERRAL BONUS
   if(refVal && users[refVal]){
-    users[refVal].coins += 20;
+    users[refVal].bonus = (users[refVal].bonus || 0) + 2000; // 2000 Bonus = ₹20 play value
+
     users[refVal].referrals.push(uid);
 
     setStore("users", users);
 
     await db.collection("users").doc(refVal).update({
-      coins: users[refVal].coins,
-      referrals: users[refVal].referrals
+    bonus: users[refVal].bonus,
+    referrals: users[refVal].referrals
     });
   }
 

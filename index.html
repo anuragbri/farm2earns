@@ -469,23 +469,6 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
   border:2px solid #f6c94b;
   box-shadow:0 0 40px rgba(0,0,0,.8);
 }
-
-.popupBox{
-  width:300px;
-  background:#0f1117;
-  padding:22px;
-  border-radius:18px;
-  text-align:center;
-  border:1px solid rgba(255,255,255,.08);
-  box-shadow:0 0 40px rgba(0,0,0,.8);
-  transform:scale(.7);
-  opacity:0;
-  transition:.3s cubic-bezier(.16,1,.3,1);
-}
-.popupBox.show{
-  transform:scale(1);
-  opacity:1;
-}
 .popupIcon{
   font-size:44px;
 }
@@ -502,15 +485,16 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
 }
 /* ✅ SINGLE SAFE OVERLAY RULE */
 
-#overlayPopup.hidden {
-  display: none !important;
+#overlayPopup{
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,0.65) !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999999 !important;
 }
 
-
-
-
-
-/* popup box */
 .popupBox{
   background:#111;
   padding:24px;
@@ -520,6 +504,7 @@ th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03
   border:2px solid #f6c94b;
   box-shadow:0 0 40px rgba(0,0,0,.8);
 }
+
 
 
 /* ❌ CUT BUTTON */
@@ -900,15 +885,15 @@ button{
   <div class="mineRight">
 
     <div id="mineGrid" class="mineGrid">
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
-      <div class="mineBox">❓</div>
+      <div class="mineBox" data-index="0">❓</div>
+      <div class="mineBox" data-index="1">❓</div>
+      <div class="mineBox" data-index="2">❓</div>
+      <div class="mineBox" data-index="3">❓</div>
+      <div class="mineBox" data-index="4">❓</div>
+      <div class="mineBox" data-index="5">❓</div>
+      <div class="mineBox" data-index="6">❓</div>
+      <div class="mineBox" data-index="7">❓</div>
+      <div class="mineBox" data-index="8">❓</div>
     </div>
 
   </div>
@@ -1641,14 +1626,27 @@ function renderInventory() {
 function showOverlay(html){
   const ov = document.getElementById("overlay");
   const box = document.getElementById("overlayContent");
+
+  if(!ov || !box){
+    console.error("Overlay elements missing");
+    return;
+  }
+
   box.innerHTML = html;
   ov.style.display = "flex";
 }
 
+
 function hideOverlay(){
-  document.getElementById("overlay").style.display = "none";
-  document.getElementById("overlayContent").innerHTML = "";
+  const ov = document.getElementById("overlay");
+  const box = document.getElementById("overlayContent");
+
+  if(!ov || !box) return;
+
+  ov.style.display = "none";
+  box.innerHTML = "";
 }
+
 
 
 
@@ -1776,6 +1774,8 @@ function openFarmPopup(cropKey) {
     `,
     `<button class='btn gold' onclick="confirmStartFarm('${cropKey}', ${lots})">Confirm</button>`
   );
+  return true;
+
 }
 function convertCoinsToBonusOnce() {
   let users = getStore("users", {});
@@ -1994,7 +1994,8 @@ function updateMineInfo() {
     currentMultiplier.toFixed(2) + "x";
 
   document.getElementById("mineWin").innerText =
-    Math.floor(betAmount * currentMultiplier) * 100;
+  Math.floor(betAmount * currentMultiplier);
+
 }
 
 
@@ -2563,11 +2564,28 @@ mineRef.onSnapshot(doc => {
   mineConfig = doc.data();
   console.log("🔥 Mine settings updated:", mineConfig);
 });
+const MINE_MULTIPLIER = {
+  easy: {
+    base: 1.00,
+    step: 0.20   // 🔥 EASY = slow growth
+  },
+  medium: {
+    base: 1.00,
+    step: 0.35
+  },
+  hard: {
+    base: 1.00,
+    step: 0.60
+  }
+};
 
 /* ===============================
    🎮 START GAME
 ================================ */
 function startMineGame(){
+  // 🔥 READ DIFFICULTY FROM UI
+  mineConfig.difficulty =
+  document.getElementById("mineDifficulty").value;
   const amt = parseInt(document.getElementById("mineBet").value) || 0;
   if (amt <= 0) return showMessage("Enter valid bet amount", "error");
 
@@ -2594,7 +2612,8 @@ function startMineGame(){
   betAmount = amt;
   mineActive = true;
   openedSafe = 0;
-  currentMultiplier = mineConfig.baseMultiplier;
+  const diff = mineConfig.difficulty;
+  currentMultiplier = MINE_MULTIPLIER[diff].base;
 
   generateBombs();
   resetMineUI();
@@ -2631,65 +2650,70 @@ function setMineMode(mode){
 function generateBombs(){
   bombIndexes = [];
 
-  let bombCount =
-    mineConfig.difficulty === "easy" ? 1 :
-    mineConfig.difficulty === "medium" ? 2 : 3;
+  let bombCount = 1; // default easy
 
-  // Admin force logic
-  if (mineConfig.mode === "force-win") {
-    bombCount = 0;
-  }
-  if (mineConfig.mode === "force-lose") {
-    bombCount = 1;
-  }
+  if (mineConfig.difficulty === "medium") bombCount = 2;
+  if (mineConfig.difficulty === "hard") bombCount = 3;
+
+  // 🔥 ADMIN FORCE OVERRIDE (OPTIONAL)
+  if (mineConfig.mode === "force-win") bombCount = 0;
+  if (mineConfig.mode === "force-lose") bombCount = 1;
 
   while (bombIndexes.length < bombCount) {
     const r = Math.floor(Math.random() * 9);
-    if (!bombIndexes.includes(r)) bombIndexes.push(r);
+    if (!bombIndexes.includes(r)) {
+      bombIndexes.push(r);
+    }
   }
 
-  console.log("💣 Bombs:", bombIndexes);
+  console.log(
+    `💣 Difficulty: ${mineConfig.difficulty} | Bombs:`,
+    bombIndexes
+  );
 }
+
 
 /* ===============================
    🟩 OPEN BLOCK
 ================================ */
 function openMineBlock(index, el) {
-  // 🔒 Game inactive check
-  if (!mineActive) return;
 
-  // 🔒 Already opened block
+  if (!mineActive) return;
   if (el.dataset.opened === "1") return;
 
   el.dataset.opened = "1";
 
-  // 💣 BOMB HIT
+  /* 💣 BOMB */
   if (bombIndexes.includes(index)) {
+
     el.innerText = "💣";
     el.style.background = "linear-gradient(180deg,#3a0b0b,#1a0505)";
     el.style.boxShadow = "0 0 20px rgba(255,80,80,.6)";
+
     mineActive = false;
 
-    // reveal all bombs
+    // 🔒 Disable all blocks
     document.querySelectorAll(".mineBox").forEach((box, i) => {
+      box.style.pointerEvents = "none";
       if (bombIndexes.includes(i)) {
         box.innerText = "💣";
         box.style.background = "linear-gradient(180deg,#3a0b0b,#1a0505)";
       }
-      box.style.pointerEvents = "none";
     });
 
-    // ❌ LOSS POPUP
-    showOverlay(`
-  <h2>💣 Boom!</h2>
-  <p>You lost this round</p>
-  <button class="btn gold" onclick="hideOverlay()">OK</button>`);
+    // ✅ POPUP (GUARANTEED)
+    setTimeout(() => {
+      openPopup(
+        "💣 Boom!",
+        "You lost this round",
+        "💣"
+      );
+    }, 150);
 
-
-    return;
+    return; // 🔥🔥🔥 THIS WAS MISSING
   }
 
-  // 🌽 SAFE BLOCK
+  /* 🌽 SAFE */
   el.innerText = "🌽";
   el.style.background = "linear-gradient(180deg,#14532d,#052e16)";
   el.style.boxShadow = "0 0 18px rgba(126,242,179,.45)";
@@ -2697,20 +2721,21 @@ function openMineBlock(index, el) {
 
   openedSafe++;
 
-  // 📈 multiplier increase
-  currentMultiplier =
-    mineConfig.baseMultiplier +
-    openedSafe * mineConfig.stepMultiplier;
+  const diff = mineConfig.difficulty;
 
-  // UI update
+  currentMultiplier =
+  MINE_MULTIPLIER[diff].base +
+  openedSafe * MINE_MULTIPLIER[diff].step;
+
+
   updateMineInfo();
 
-  // 🎉 Small feedback
   showMessage(
     `Safe! Multiplier x${currentMultiplier.toFixed(2)}`,
     "success"
   );
 }
+
 
 function claimBonusZoneDaily() {
   let users = getStore("users", {});
@@ -2796,10 +2821,10 @@ function cashOutMine(){
   renderWallet();
 
   setTimeout(()=>{
-  showOverlay(`
-  <h2>🎉 Game Jeet Gaye!</h2>
-  <p>₹${winAmount} credited</p>
-  <button class="btn gold" onclick="hideOverlay()">OK</button>`);
+  openPopup(
+  "🎉 Game Jeet Gaye!",
+  `₹${winAmount} credited`,
+  "🎉");
 
   }, 100);
 }
@@ -2833,41 +2858,73 @@ function revealAllBombs(){
 
 
 function resetMineUI() {
-  document.querySelectorAll(".mineBox").forEach((box, i) => {
+  document.querySelectorAll(".mineBox").forEach(box => {
+    const index = Number(box.dataset.index);
+
     box.innerText = "❓";
     box.dataset.opened = "0";
     box.style.pointerEvents = "auto";
     box.style.background = "";
     box.style.boxShadow = "";
-    box.onclick = () => openMineBlock(i, box);
+
+    box.onclick = () => openMineBlock(index, box);
   });
 }
+
 
 
 function updateMultiplierUI(x){
   const el = document.getElementById("mineMultiplier");
   if (el) el.innerText = x.toFixed(2) + "x";
 }
+function closeAllOverlays(){
+  const ids = [
+    "overlay",
+    "overlayPopup",
+    "noticePopup",
+    "countdownPopup"
+  ];
+
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){
+      el.style.display = "none";
+      el.classList.remove("show");
+    }
+  });
+}
 
 /* ===============================
    📦 POPUP
 ================================ */
 function openPopup(title, message, icon="🎉"){
-  const pop = document.getElementById("overlayPopup");
+  // 🔥 close everything else first
+  closeAllOverlays();
 
-  pop.classList.remove("hidden");
-  pop.style.display = "flex";
+  const pop = document.getElementById("overlayPopup");
+  if(!pop){
+    console.error("overlayPopup missing");
+    return;
+  }
 
   document.getElementById("popupTitle").innerHTML = title;
   document.getElementById("popupText").innerHTML = message;
   document.getElementById("popupIcon").innerText = icon;
+
+  pop.style.display = "flex";
+  pop.style.zIndex = "9999999"; // 🔥 FORCE TOP
 }
+
+
 
 function closePopup(){
   const pop = document.getElementById("overlayPopup");
+  if(!pop) return;
+
   pop.style.display = "none";
-  pop.classList.add("hidden");
+  pop.classList.remove("show");
 }
+
 
 
 
@@ -4139,6 +4196,28 @@ async function redeemCode(){
       Cancel
     </button>
 
+  </div>
+</div>
+<!-- ✅ GLOBAL OVERLAY (FIX) -->
+<div id="overlay" style="
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(4px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999999;
+">
+  <div id="overlayContent" style="
+    background:#111;
+    padding:24px;
+    width:320px;
+    border-radius:16px;
+    border:2px solid #f6c94b;
+    box-shadow:0 0 40px rgba(0,0,0,.8);
+    position:relative;
+  ">
   </div>
 </div>
 
